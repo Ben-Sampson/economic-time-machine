@@ -28,6 +28,28 @@
   };
   const COMPARE_KEYS = ["Inflation_12m", "Unemployment", "FedFunds", "Yield_10Y", "YieldCurve_10Y2Y", "SP_Real_YoY", "Oil_YoY", "Gold", "DollarIndex"];
   const HISTORY_KEYS = COMPARE_KEYS.concat(["CAPE_Annual", "HomePrice_YoY", "M2_YoY"]);
+  // Long-history annual series (1900+) — keys map into longAnnual.years
+  const LONG_HIST = [
+    { key: "inflation", label: "Inflation", long: "Inflation (Shiller CPI YoY)", unit: "%", zero: true, src: "Shiller CPI (derived YoY)" },
+    { key: "unemployment", label: "Unemployment", long: "Unemployment rate", unit: "%", src: "Census HSUS D86 (est. pre-1948) / BLS UNRATE" },
+    { key: "gold_yoy", label: "Gold YoY", long: "Gold, yearly change", unit: "%", zero: true, src: "Official U.S. price → World Bank Pink Sheet" },
+    { key: "gold", label: "Gold ($)", long: "Gold price ($/oz)", unit: "$", src: "Official U.S. price → World Bank Pink Sheet" },
+    { key: "m2_yoy", label: "M2 YoY", long: "M2 money supply, yearly change", unit: "%", zero: true, src: "Census HSUS X415 → FRED M2SL" },
+    { key: "real_sp_yoy", label: "Real S&P YoY", long: "Real S&P 500, yearly change", unit: "%", zero: true, src: "Shiller (derived YoY only)" },
+    { key: "cape", label: "CAPE", long: "Shiller CAPE (annual)", unit: "×", src: "Shiller (annual only)" },
+    { key: "short_rate", label: "Short rate", long: "Short-term interest rate", unit: "%", src: "NBER commercial paper (chart citation) → FEDFUNDS" },
+    { key: "long_rate", label: "Long rate", long: "Long-term interest rate", unit: "%", src: "Shiller long rate" },
+    { key: "fed_debt_yoy", label: "Debt YoY", long: "Federal debt, yearly change", unit: "%", zero: true, src: "Treasury GFDEBTN via FRED" },
+    { key: "recession_share", label: "Recession share", long: "Share of months in recession", unit: "", src: "NBER via FRED USREC (shading)" },
+  ];
+  const ERA_FILTERS = [
+    { id: "core", label: "Since 1950 (core)" },
+    { id: "all_1900", label: "All years since 1900" },
+    { id: "classical_gold_standard", label: "Gold standard" },
+    { id: "gold_reserve_act_wartime", label: "1934–45" },
+    { id: "bretton_woods", label: "Bretton Woods" },
+    { id: "fiat", label: "Fiat" },
+  ];
   const SNAP_KEYS = ["Inflation_12m", "Unemployment", "FedFunds", "Yield_10Y", "YieldCurve_10Y2Y", "CAPE", "WTI_Oil", "Gold", "DollarIndex"];
 
   // Scoring features (annual.json) in plain English
@@ -75,11 +97,12 @@
     return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   }
   async function loadData() {
-    const names = ["series", "annual", "what_next", "analogs", "money"];
+    const names = ["series", "annual", "what_next", "analogs", "money", "eras", "long_annual", "analogs_long", "compare_library", "expansion"];
     try {
       if (location.protocol === "file:") throw new Error("file");
       const got = await Promise.all(names.map((n) => fetch("data/" + n + ".json", { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(n); return r.json(); })));
-      return { series: got[0], annual: got[1], whatNext: got[2], analogs: got[3], money: got[4] };
+      return { series: got[0], annual: got[1], whatNext: got[2], analogs: got[3], money: got[4],
+        eras: got[5], longAnnual: got[6], analogsLong: got[7], compareLibrary: got[8], expansion: got[9] };
     } catch (e) {
       await loadScript("data/bundle.js");
       return window.MACRO_DATA;
@@ -114,12 +137,30 @@
           if (p1 > p0) { ctx.fillStyle = color; ctx.fillRect(p0, ca.top, p1 - p0, ca.bottom - ca.top); }
           return [p0, p1];
         };
+        (opts.eras || []).forEach((e) => {
+          const [p0, p1] = draw(e.from, e.to, e.color);
+          if (e.short && p1 - p0 > 56) {
+            ctx.fillStyle = "rgba(231,233,230,0.55)"; ctx.font = "600 10px " + Chart.defaults.font.family; ctx.textAlign = "left";
+            ctx.fillText(e.short, p0 + 5, ca.bottom - 6);
+          }
+        });
         (opts.bands || []).forEach(([a, b]) => draw(a, b, REC_FILL));
+        (opts.yearBands || []).forEach((yb) => draw(yb.from, yb.to, yb.color));
         (opts.highlights || []).forEach((h) => {
           const [p0, p1] = draw(h.from, h.to, h.color);
           if (h.label && p1 > p0) {
             ctx.fillStyle = h.text || "#fff"; ctx.font = "600 11px " + Chart.defaults.font.family; ctx.textAlign = "center";
             ctx.fillText(h.label, (p0 + p1) / 2, ca.top + 12);
+          }
+        });
+        (opts.markers || []).forEach((m) => {
+          const px = x.getPixelForValue(m.t);
+          if (px < ca.left || px > ca.right) return;
+          ctx.strokeStyle = m.color || "rgba(216,195,147,0.85)"; ctx.lineWidth = 1.5; ctx.setLineDash(m.dash || [4, 3]);
+          ctx.beginPath(); ctx.moveTo(px, ca.top); ctx.lineTo(px, ca.bottom); ctx.stroke(); ctx.setLineDash([]);
+          if (m.label) {
+            ctx.fillStyle = m.text || SAND; ctx.font = "600 10px " + Chart.defaults.font.family; ctx.textAlign = "left";
+            ctx.fillText(m.label, Math.min(px + 4, ca.right - 60), ca.top + 12);
           }
         });
         ctx.restore();
@@ -129,7 +170,7 @@
   function axisPct(v) { return v + "%"; }
 
   // ------------------------------------------------------------ state
-  let D, idx = {}, recBands = [], histRows = [], selectedYear = null, nextH = 12;
+  let D, idx = {}, recBands = [], histRows = [], selectedYear = null, nextH = 12, rankFilter = "core", histLong = false, cmpId = null, cmpYear = 2007, cmpMode = "auto";
 
   function series(key) { return (D.series.series[key]) || (D.money && D.money.series[key]) || null; }
   function val(key, ym) { const s = series(key); const i = idx[ym]; return s && i != null ? s[i] : null; }
@@ -412,10 +453,51 @@
   }
 
   // ------------------------------------------------------------ RANKING + GAPS
+  function initRankFilter() {
+    const box = $("rankFilter"); if (!box) return;
+    box.innerHTML = "";
+    ERA_FILTERS.forEach((f) => {
+      const b = el("button", "chip" + (f.id === rankFilter ? " active" : ""), f.label);
+      b.type = "button"; b.dataset.filter = f.id; b.setAttribute("role", "tab");
+      b.onclick = () => { rankFilter = f.id; box.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b)); renderRanking(); };
+      box.appendChild(b);
+    });
+  }
+  function rankRows() {
+    if (rankFilter === "core") {
+      return D.analogs.rows.filter((r) => isNum(r.similarity_score)).slice(0, 20).map((r) => ({ ...r, score_kind: "core" }));
+    }
+    const L = D.analogsLong || {};
+    if (!L.available) return [];
+    let rows;
+    if (rankFilter === "all_1900") rows = L.rows.slice();
+    else rows = (L.by_era[rankFilter] || []).slice();
+    return rows.filter((r) => isNum(r.similarity_score)).slice(0, 20).map((r) => ({
+      ...r, recent: r.year >= 2024, historical_rank: r.era_rank || r.rank, score_kind: "long",
+    }));
+  }
+  function bestHistorical(rows) {
+    return rows.find((r) => !r.recent && isNum(r.similarity_score));
+  }
   function renderRanking() {
     if (!HAS_CHART) return;
-    const rows = D.analogs.rows.filter((r) => isNum(r.similarity_score)).slice(0, 20);
-    $("rankTitle").innerHTML = "Top 20 years by similarity" + (D.analogs.is_placeholder ? " <span class='pill pill-warn'>Example data</span>" : "") + " <span class='muted'>(sand = year in the time machine · grey = recent, sanity check only)</span>";
+    const rows = rankRows();
+    const long = rankFilter !== "core";
+    const best = bestHistorical(rows);
+    $("rankTitle").innerHTML = (long ? "Top years · long-history score (9 features)" : "Top 20 years by similarity") +
+      (D.analogs.is_placeholder ? " <span class='pill pill-warn'>Example data</span>" : "") +
+      " <span class='muted'>(sand = year in the time machine · grey = recent, sanity check only)</span>";
+    const eraLabel = (ERA_FILTERS.find((f) => f.id === rankFilter) || {}).label || "";
+    if (long && best) {
+      $("rankEraBest").innerHTML = "Best match in <b>" + eraLabel + "</b>: <b>" + best.year + "</b> (similarity " + fx(best.similarity_score, 1) +
+        "). " + (best.year === 1929 ? "2026’s closest gold-standard-era match is 1929 — see the Monetary eras section for what happened next." : "Tap the bar to load it into the time machine.") +
+        " <span class='muted'>Long-history score uses 9 features; the 1950+ core score is unchanged.</span>";
+    } else if (long) {
+      $("rankEraBest").innerHTML = "<span class='muted'>Long-history score uses 9 features available since ~1900. The 1950+ core score (13 features) is unchanged.</span>";
+    } else {
+      $("rankEraBest").innerHTML = "";
+    }
+    if (charts.rank) charts.rank.destroy();
     charts.rank = new Chart($("rankChart"), {
       type: "bar",
       data: { labels: rows.map((r) => String(r.year)), datasets: [{ data: rows.map((r) => r.similarity_score), borderRadius: 6, borderSkipped: false, barPercentage: 0.8,
@@ -423,18 +505,24 @@
       options: {
         indexAxis: "y", animation: { duration: 600 },
         scales: { x: { min: 0, max: 100, grid: { color: "rgba(255,255,255,0.05)" } }, y: { grid: { display: false }, ticks: { autoSkip: false, font: { weight: 600 } } } },
-        plugins: { tooltip: { callbacks: { label: (it) => { const r = rows[it.dataIndex]; return " Similarity " + fx(r.similarity_score, 1) + (r.recent ? " (recent year, sanity check)" : " · historical #" + r.historical_rank); } } } },
+        plugins: { tooltip: { callbacks: { label: (it) => { const r = rows[it.dataIndex]; return " Similarity " + fx(r.similarity_score, 1) + (r.recent ? " (recent year, sanity check)" : (r.historical_rank ? " · #" + r.historical_rank : "")); } } } },
         onClick: (_e, els) => { if (els.length) selectYear(rows[els[0].index].year, true); },
         onHover: (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; },
       },
     });
+    // gaps: prefer core gaps; fall back to long-history gaps
+    if (selectedYear) renderGaps(selectedYear);
+  }
+  function analogRowAny(y) {
+    return analogRow(y) || ((D.analogsLong || {}).rows || []).find((r) => r.year === y) || null;
   }
   function renderGaps(y) {
     $("gapYear").textContent = y;
     if (!HAS_CHART) return;
-    const r = analogRow(y); const gaps = (r && r.gaps) || {};
-    const keys = Object.keys(FEAT).filter((f) => f in gaps && isNum(gaps[f]) && f !== "recession_share").sort((a, b) => Math.abs(gaps[a]) - Math.abs(gaps[b]));
-    const labels = keys.map((f) => FEAT[f].label.replace(/ \(.*\)/, "").replace(", yearly change", " (yoy)")), data = keys.map((f) => gaps[f]);
+    const r = analogRowAny(y); const gaps = (r && r.gaps) || {};
+    const featLabel = (f) => (FEAT[f] ? FEAT[f].label : f).replace(/ \(.*\)/, "").replace(", yearly change", " (yoy)").replace(/_/g, " ");
+    const keys = Object.keys(gaps).filter((f) => isNum(gaps[f]) && f !== "recession_share").sort((a, b) => Math.abs(gaps[a]) - Math.abs(gaps[b]));
+    const labels = keys.map(featLabel), data = keys.map((f) => gaps[f]);
     const colors = data.map((v) => Math.abs(v) < 0.5 ? GREEN : Math.abs(v) < 1 ? GOLD : PINK);
     if (!charts.gap) {
       charts.gap = new Chart($("gapChart"), {
@@ -449,58 +537,97 @@
   }
 
   // ------------------------------------------------------------ HISTORY
-  let histKey = "Inflation_12m", histFrom = 1950;
+  let histKey = "Inflation_12m", histFrom = 1950, longKey = "inflation";
+  function eraBands() { return ((D.eras || {}).bands || []).map((e) => ({ from: e.from, to: e.to, color: e.color, short: e.short })); }
+  function nixonMarker() { const n = (D.eras || {}).nixon; return n ? [{ t: n.t, label: "Aug 1971: gold window closed" }] : []; }
+  function longYears() { return ((D.longAnnual || {}).years || []); }
+  function longRecessionBands() {
+    // annual recession share → tinted year bands (pre-1950 only; 1950+ use monthly bands)
+    return longYears().filter((r) => +r.year < 1950 && isNum(r.recession_share) && r.recession_share > 0)
+      .map((r) => ({ from: +r.year, to: +r.year + 1, color: "rgba(204,143,143," + (0.05 + 0.12 * r.recession_share).toFixed(3) + ")" }));
+  }
   function renderHistoryTabs() {
     const tabs = $("historyTabs");
-    HISTORY_KEYS.forEach((k) => {
-      if (!series(k) && !IND[k].annual) return;
-      const b = el("button", "chip" + (k === histKey ? " active" : ""), IND[k].label); b.type = "button"; b.setAttribute("role", "tab");
-      b.onclick = () => { histKey = k; tabs.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b)); updateHistory(); };
-      tabs.appendChild(b);
-    });
+    tabs.innerHTML = "";
+    if (histFrom < 1950) {
+      LONG_HIST.forEach((m) => {
+        if (!longYears().some((r) => isNum(r[m.key]))) return;
+        const b = el("button", "chip" + (m.key === longKey ? " active" : ""), m.label); b.type = "button"; b.setAttribute("role", "tab");
+        b.onclick = () => { longKey = m.key; tabs.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b)); updateHistory(); };
+        tabs.appendChild(b);
+      });
+    } else {
+      HISTORY_KEYS.forEach((k) => {
+        if (!series(k) && !IND[k].annual) return;
+        const b = el("button", "chip" + (k === histKey ? " active" : ""), IND[k].label); b.type = "button"; b.setAttribute("role", "tab");
+        b.onclick = () => { histKey = k; tabs.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b)); updateHistory(); };
+        tabs.appendChild(b);
+      });
+    }
     document.querySelectorAll("#rangeToggle button").forEach((b) => b.onclick = () => {
-      histFrom = +b.dataset.from; document.querySelectorAll("#rangeToggle button").forEach((x) => x.classList.toggle("active", x === b)); updateHistory();
+      const was = histFrom < 1950;
+      histFrom = +b.dataset.from; document.querySelectorAll("#rangeToggle button").forEach((x) => x.classList.toggle("active", x === b));
+      if (was !== (histFrom < 1950)) renderHistoryTabs();
+      updateHistory();
     });
+    renderEraLegend();
+  }
+  function renderEraLegend() {
+    const box = $("eraLegend"); if (!box) return;
+    box.innerHTML = eraBands().map((e) => "<span><i style='background:" + e.color.replace(/0\.1\d?\)/, "0.6)") + "'></i>" + e.short + "</span>").join("") +
+      "<span><i style='background:rgba(204,143,143,0.45)'></i>Recession</span><span><i style='background:none;border-left:2px dashed " + SAND + ";width:0;height:12px'></i>Aug 1971</span>";
   }
   function updateHistory() {
     if (!HAS_CHART) return;
-    const m = IND[histKey], dates = D.series.dates;
-    const data = [];
-    if (m.annual) {   // restricted series: annual averages only
-      const ci = D.annual.features.indexOf("cape");
-      D.annual.years.forEach((y) => { const v = D.annual.values[y][ci]; if (isNum(v)) data.push({ x: +y + 0.5, y: v }); });
-    } else series(histKey).forEach((v, i) => { if (isNum(v)) data.push({ x: tOf(dates[i]), y: v }); });
-    const first = data.length ? data[0].x : 1950;
-    $("historyTitle").textContent = m.long;
-    $("historyNote").textContent = first > 1950.5 ? "(data from " + Math.floor(first) + ")" : "";
-    $("historyExplain").textContent = m.explain + " Source: " + m.src + ".";
+    const longMode = histFrom < 1950;
+    let data = [], title, explain, note = "", annualPts = false, zero = false, fmt;
+    if (longMode) {
+      const m = LONG_HIST.find((x) => x.key === longKey) || LONG_HIST[0];
+      longYears().forEach((r) => { if (isNum(r[m.key])) data.push({ x: +r.year + 0.5, y: r[m.key] }); });
+      title = m.long; annualPts = true; zero = !!m.zero;
+      fmt = (v) => m.unit === "$" ? "$" + fx(v, 0) : m.unit === "×" ? fx(v, 1) + "×" : m.unit === "%" ? fx(v, 1) + "%" : fx(v, 2);
+      explain = "Annual averages, 1900–2026. Source: " + m.src + "." + (m.key === "unemployment" ? " Pre-1948 values are Census Historical Statistics estimates." : "") +
+        (m.key === "gold" || m.key === "gold_yoy" ? " Before 1971 the official dollar price of gold was fixed by law ($20.67, then $35 from 1934), so it only moved when the law changed." : "") +
+        (m.key === "short_rate" ? " Pre-1954 short rate: NBER commercial-paper series via FRED (chart with citation; no download)." : "");
+      const first = data.length ? Math.floor(data[0].x) : 1900;
+      note = first > 1900 ? "(data from " + first + ")" : "";
+    } else {
+      const m = IND[histKey], dates = D.series.dates;
+      if (m.annual) {
+        const ci = D.annual.features.indexOf("cape");
+        D.annual.years.forEach((y) => { const v = D.annual.values[y][ci]; if (isNum(v)) data.push({ x: +y + 0.5, y: v }); });
+        annualPts = true;
+      } else series(histKey).forEach((v, i) => { if (isNum(v)) data.push({ x: tOf(dates[i]), y: v }); });
+      const first = data.length ? data[0].x : 1950;
+      title = m.long; zero = !!m.zero; fmt = (v) => fmtInd(histKey, v);
+      note = first > 1950.5 ? "(data from " + Math.floor(first) + ")" : "";
+      explain = m.explain + " Source: " + m.src + ".";
+    }
+    $("historyTitle").textContent = title;
+    $("historyNote").textContent = note;
+    $("historyExplain").textContent = explain;
     const hl = [{ from: TARGET, to: TARGET + 1, color: "rgba(143,188,152,0.20)", label: "2026", text: C26 }];
     if (selectedYear) hl.push({ from: selectedYear, to: selectedYear + 1, color: "rgba(216,195,147,0.22)", label: String(selectedYear), text: CY });
     const xmax = TARGET + 1;
-    if (!charts.history) {
-      charts.history = new Chart($("historyChart"), {
-        type: "line",
-        data: { datasets: [{ data, borderColor: C26, borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 3, tension: 0, spanGaps: false }] },
-        options: {
-          parsing: false, normalized: true, interaction: { mode: "nearest", axis: "x", intersect: false },
-          scales: { x: { type: "linear", min: histFrom, max: xmax, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 10 } },
-            y: { ticks: { includeBounds: false }, grid: { color: (c) => (m.zero && c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)") } } },
-          plugins: { bands: { bands: recBands, highlights: hl },
-            tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return IND[histKey].annual ? y + " average" : MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + fmtInd(histKey, it.parsed.y) } } },
-        },
-      });
-    } else {
-      const c = charts.history; c.data.datasets[0].data = data; c.options.scales.x.min = histFrom;
-      c.data.datasets[0].pointRadius = m.annual ? 2.5 : 0; c.data.datasets[0].stepped = m.annual ? "middle" : false;
-      c.options.plugins.bands.highlights = hl;
-      c.options.scales.y.grid.color = (ctx) => (IND[histKey].zero && ctx.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)");
-      c.options.plugins.tooltip.callbacks.label = (it) => " " + fmtInd(histKey, it.parsed.y);
-      c.update();
+    const plug = { eras: eraBands(), bands: recBands, yearBands: longMode ? longRecessionBands() : [], highlights: hl, markers: nixonMarker() };
+    if (charts.history) charts.history.destroy();
+    charts.history = new Chart($("historyChart"), {
+      type: "line",
+      data: { datasets: [{ data, borderColor: C26, borderWidth: 1.75, pointRadius: annualPts ? 2 : 0, pointHoverRadius: 3, tension: 0, spanGaps: false, stepped: annualPts && !longMode ? "middle" : false }] },
+      options: {
+        parsing: false, normalized: true, interaction: { mode: "nearest", axis: "x", intersect: false },
+        scales: { x: { type: "linear", min: histFrom, max: xmax, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 12 } },
+          y: { type: longMode && longKey === "gold" ? "logarithmic" : "linear", ticks: { includeBounds: false }, grid: { color: (c) => (zero && c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)") } } },
+        plugins: { bands: plug,
+          tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return annualPts ? y + " average" : MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + fmt(it.parsed.y) } } },
+      },
+    });
+    if (!(longMode && longKey === "gold")) {
+      const vis = data.filter((p) => p.x >= histFrom).map((p) => p.y);
+      if (vis.length) { const lo = Math.min(...vis), hi = Math.max(...vis), pad = (hi - lo) * 0.06 || 1; charts.history.options.scales.y.min = lo - pad; charts.history.options.scales.y.max = hi + pad; charts.history.update("none"); }
     }
-    // fit y-axis to the visible window
-    const vis = data.filter((p) => p.x >= histFrom).map((p) => p.y);
-    if (vis.length) { const lo = Math.min(...vis), hi = Math.max(...vis), pad = (hi - lo) * 0.06 || 1; charts.history.options.scales.y.min = lo - pad; charts.history.options.scales.y.max = hi + pad; charts.history.update("none"); }
   }
+
 
   // ------------------------------------------------------------ BUILD YOUR OWN 2026
   let B = null;
@@ -651,7 +778,7 @@
           parsing: false, normalized: true, interaction: { mode: "index", intersect: false },
           scales: { x: { type: "linear", min: moneyFrom, max: TARGET + 1, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 10 } },
             y: { suggestedMin: -20, suggestedMax: 40, grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: axisPct } } },
-          plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3, usePointStyle: false } }, bands: { bands: recBands },
+          plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3, usePointStyle: false } }, bands: { bands: recBands, eras: eraBands(), markers: nixonMarker() },
             tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + it.dataset.label + ": " + signed(it.parsed.y, 1, "%") } } },
         },
       });
@@ -887,6 +1014,303 @@
     $("projNote").textContent = "Historical arithmetic, not a forecast. It shows what repeating " + y + "–" + (y + 2) + "'s money growth would mean at today's size. Today's levels: Fed balance sheet = monthly average of weekly WALCL; M2 = M2SL; monetary base = BOGMBASE (all Federal Reserve Board via FRED).";
   }
 
+
+  // ------------------------------------------------------------ MONETARY ERAS
+  function renderEras() {
+    const E = D.eras || {};
+    if (!E.available) { $("eras").classList.add("hidden"); return; }
+    $("eraTimeline").innerHTML = (E.bands || []).map((b) =>
+      "<article class='era-band' data-era='" + b.id + "'><div class='era-years'>" + b.years + "</div><h3>" + b.label + "</h3><p>" + b.note + "</p></article>"
+    ).join("");
+    const n = E.nixon || {};
+    $("eraNixon").innerHTML = "<span class='era-nixon-mark'>" + (n.date || "1971-08-15").replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_,y,m,d) => MONTHS[+m-1] + " " + +d + ", " + y) +
+      "</span> Nixon closes the gold window. The dollar is no longer convertible into gold at a fixed price.";
+    $("eraContrasts").innerHTML = (E.contrasts || []).map((c) => {
+      const vol = (v) => isNum(v) ? "<div class='vol'>volatility " + fx(v, 1) + "</div>" : "";
+      const unit = c.unit === "% of years" ? "%" : c.unit;
+      return "<article class='era-card'><div class='era-card-k'>" + c.label + "</div><div class='era-card-pair'>" +
+        "<div><div class='lbl'>Before 1971</div><div class='val'>" + fx(c.before, c.id === "recessions" ? 0 : 1) + (unit === "%" ? "%" : unit ? " " + unit : "") + "</div>" + vol(c.before_vol) + "</div>" +
+        "<div class='after'><div class='lbl'>Fiat era</div><div class='val'>" + fx(c.after, c.id === "recessions" ? 0 : 1) + (unit === "%" ? "%" : unit ? " " + unit : "") + "</div>" + vol(c.after_vol) + "</div>" +
+        "</div><p>" + c.note + "</p></article>";
+    }).join("");
+    $("eraNote").textContent = E.note || "";
+    // 1929 callout
+    const tops = ((D.analogsLong || {}).tops) || {};
+    const gold = tops.classical_gold_standard || (((D.analogsLong || {}).by_era || {}).classical_gold_standard || [])[0];
+    const y = gold ? gold.year : 1929;
+    $("eraGoldYear").textContent = y;
+    $("eraGoldSub").innerHTML = "Similarity " + fx(gold ? gold.similarity_score : 66.8, 1) + " on the long-history score (" +
+      (gold ? gold.n_features : 9) + " features). Runners-up in the gold-standard era: " +
+      ((((D.analogsLong || {}).by_era || {}).classical_gold_standard || []).slice(1, 3).map((r) => r.year).join(", ") || "1928, 1901") + ".";
+    const wn = ((D.longAnnual || {}).what_next || {})[String(y)] || {};
+    const cell = (k, v, cls) => "<div class='en'><div class='en-k'>" + k + "</div><div class='en-v " + (cls || "") + "'>" + v + "</div></div>";
+    const bits = [];
+    if (isNum(wn.real_sp_yoy_next_year)) bits.push(cell("Real S&P, next year", signed(wn.real_sp_yoy_next_year, 1, "%"), wn.real_sp_yoy_next_year < 0 ? "down" : ""));
+    if (isNum(wn.real_sp_yoy_year_plus_2)) bits.push(cell("Real S&P, year +2", signed(wn.real_sp_yoy_year_plus_2, 1, "%"), wn.real_sp_yoy_year_plus_2 < 0 ? "down" : ""));
+    if (isNum(wn.unemployment_chg_12m_pp)) bits.push(cell("Unemployment, +12 mo", signed(wn.unemployment_chg_12m_pp, 1, " pts"), wn.unemployment_chg_12m_pp > 0 ? "down" : ""));
+    if (isNum(wn.unemployment_chg_24m_pp)) bits.push(cell("Unemployment, +24 mo", signed(wn.unemployment_chg_24m_pp, 1, " pts"), wn.unemployment_chg_24m_pp > 0 ? "down" : ""));
+    if (isNum(wn.inflation_chg_12m_pp)) bits.push(cell("Inflation, +12 mo", signed(wn.inflation_chg_12m_pp, 1, " pts")));
+    bits.push(cell("Recession within 24 mo", wn.recession_within_24m ? "Yes" : "No", wn.recession_within_24m ? "down" : ""));
+    $("eraGoldNext").innerHTML = bits.join("");
+  }
+
+  // ------------------------------------------------------------ COMPARE LIBRARY
+  function cmpEntry(id) { return ((D.compareLibrary || {}).catalog || []).find((e) => e.id === id); }
+  function cmpSeries(id) { return ((D.compareLibrary || {}).series || {})[id]; }
+  function initCompare() {
+    const C = D.compareLibrary || {};
+    if (!C.available) { $("compare").classList.add("hidden"); return; }
+    const sel = $("cmpSeries"); sel.innerHTML = "";
+    const groups = {};
+    (C.catalog || []).forEach((e) => { (groups[e.group] = groups[e.group] || []).push(e); });
+    Object.keys(groups).forEach((g) => {
+      const og = document.createElement("optgroup"); og.label = g;
+      groups[g].forEach((e) => {
+        const o = document.createElement("option"); o.value = e.id;
+        o.textContent = e.label + (e.tuition_proxy ? " (tuition proxy)" : "") + (e.tier === "caution" || e.tier === "link_only" ? " · citation" : "");
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    cmpId = cmpId || (C.catalog[0] && C.catalog[0].id);
+    sel.value = cmpId;
+    sel.onchange = () => { cmpId = sel.value; fillCmpYears(); updateCompare(); };
+    document.querySelectorAll("#cmpMode button").forEach((b) => b.onclick = () => {
+      cmpMode = b.dataset.mode; document.querySelectorAll("#cmpMode button").forEach((x) => x.classList.toggle("active", x === b)); updateCompare();
+    });
+    $("cmpYear").onchange = () => { cmpYear = +$("cmpYear").value; updateCompare(); };
+    const WHY = {
+      russell_2000: "Russell 2000 — no public series; FTSE Russell data are licensed, so it is left out",
+      cpi_college_tuition: "College tuition CPI — not available on FRED; the Education CPI above is shown as a tuition proxy",
+      new_vehicle_avg_transaction_price: "Average new-car transaction price — proprietary; see the new-vehicle CPI instead",
+      central_bank_gold_buying: "Central-bank gold buying — World Gold Council; link-only, not republished",
+      cpi_health_insurance: "Health-insurance CPI — not on FRED yet (BLS pull pending); see medical-care CPI",
+      cpi_daycare_preschool: "Daycare / preschool CPI — not on FRED yet (BLS pull pending)",
+      employer_health_premium: "KFF employer premiums — CC BY-NC-ND; link only, no chart of their data",
+      kff_employer_premiums: "KFF Employer Health Benefits Survey — CC BY-NC-ND; link only (kff.org)",
+      central_bank_gold_buying: "World Gold Council central-bank buying — terms forbid redistribute; link to gold.org",
+      wgc_central_bank_net_purchases: "World Gold Council net purchases — link only (gold.org/goldhub)",
+      imf_gold_ounces_physical: "IMF physical gold ounces — license OK but data not pulled this build",
+    };
+    const omitIds = ["russell_2000", "cpi_college_tuition", "new_vehicle_avg_transaction_price", "imf_gold_ounces_physical"];
+    const present = new Set((C.not_included || []).map((e) => e.id));
+    const omit = omitIds.filter((id) => present.has(id)).map((id) => WHY[id]).join("; ");
+    $("cmpOmitted").innerHTML = (omit ? "Not included: " + omit + ". " : "") +
+      "Link-only (no charts of their data): <a href='https://www.kff.org/health-costs/report/employer-health-benefits-annual-survey/' target='_blank' rel='noopener'>KFF Employer Health Benefits Survey</a> (CC BY-NC-ND) and " +
+      "<a href='https://www.gold.org/goldhub' target='_blank' rel='noopener'>World Gold Council central-bank buying</a> (terms forbid redistribution). " +
+      "Dropped: FRED IR14270, which was mislabelled as a gold-reserves share but is a BLS import price index.";
+    fillCmpYears();
+    whenVisible($("cmpLongChart"), updateCompare);
+  }
+  function fillCmpYears() {
+    const s = cmpSeries(cmpId); if (!s) return;
+    const prefer = cmpMode === "auto" ? s.prefer : cmpMode === "yoy" ? "yoy" : "level";
+    const pts = s[prefer] && s[prefer].length ? s[prefer] : (s.yoy.length ? s.yoy : s.level);
+    const years = pts.map((p) => p.y).filter((y) => y !== TARGET);
+    const sel = $("cmpYear"); const prev = cmpYear;
+    sel.innerHTML = years.map((y) => "<option value='" + y + "'>" + y + "</option>").join("");
+    cmpYear = years.includes(prev) ? prev : (years.includes(2007) ? 2007 : years[years.length - 1]);
+    sel.value = cmpYear;
+  }
+  function updateCompare() {
+    if (!HAS_CHART) return;
+    const e = cmpEntry(cmpId), s = cmpSeries(cmpId); if (!e || !s) return;
+    let mode = cmpMode === "auto" ? s.prefer : cmpMode;
+    if (mode === "yoy" && !s.yoy.length) mode = "level";
+    if (mode === "level" && !s.level.length) mode = "yoy";
+    const pts = s[mode] || [];
+    const unit = mode === "yoy" ? "%" : (e.unit === "percent" ? "%" : e.unit === "index" ? "" : e.unit === "usd_per_lb" ? "$/lb" : e.unit === "usd_per_hour" ? "$/hr" : e.unit === "usd_per_troy_oz" ? "$/oz" : e.unit === "usd_per_mt" ? "$/mt" : e.unit === "usd_bn" ? "$bn" : e.unit === "usd_mn" ? "$mn" : e.unit === "thousands" ? "k" : "");
+    const fmt = (v) => !isNum(v) ? "–" : mode === "yoy" ? signed(v, 1, "%") : (unit.startsWith("$") && unit.length > 1 ? "$" + fx(v, v >= 100 ? 0 : 2) + unit.slice(1) : fx(v, Math.abs(v) >= 100 ? 0 : 2) + (unit ? " " + unit : ""));
+    const v26 = (pts.find((p) => p.y === TARGET) || {}).v;
+    const vy = (pts.find((p) => p.y === cmpYear) || {}).v;
+    $("cmpYearLabel").textContent = cmpYear;
+    $("cmpSideNote").textContent = mode === "yoy" ? "(yearly % change)" : "(level)";
+    $("cmpLongNote").textContent = (pts[0] ? pts[0].y + "–" + pts[pts.length - 1].y : "") + (mode === "yoy" ? " · yearly %" : "");
+    $("cmpMeta").innerHTML = "<strong>" + e.label + "</strong>" +
+      (e.tuition_proxy ? " <span class='cmp-badge caution'>tuition proxy</span>" : "") +
+      (e.id === "cpi_health_insurance" ? " <span class='cmp-badge caution'>method break ~2022</span>" : "") +
+      " <span class='cmp-badge " + e.tier + "'>" + (e.tier === "ok" ? "open / public domain" : e.tier === "link_only" ? "short window · citation" : "citation required") + "</span>" +
+      " · " + e.blurb + (e.series_note ? " <em>" + e.series_note + "</em>" : "");
+    const cite = e.tier === "ok"
+      ? ("Source: " + e.series_id + " via FRED / publisher noted above. Public domain or CC BY; citation requested.")
+      : ("Source: " + e.series_id + " via FRED. " + (e.license_verdict || "Copyrighted: citation required") + ". Shown as a chart with a link to FRED — no download of this series is offered on this site.");
+    $("cmpLicense").innerHTML = cite + (e.series_id && e.series_id.indexOf("WorldBank") < 0 && e.series_id.indexOf(" ") < 0
+      ? " <a href='https://fred.stlouisfed.org/series/" + e.series_id + "' target='_blank' rel='noopener'>Open on FRED ↗</a>" : "");
+
+    if (charts.cmpSide) charts.cmpSide.destroy();
+    charts.cmpSide = new Chart($("cmpSideChart"), {
+      type: "bar",
+      data: { labels: ["2026", String(cmpYear)], datasets: [{ data: [v26, vy], backgroundColor: [SAGE, SAND], borderRadius: 8, barPercentage: 0.55 }] },
+      options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (it) => " " + fmt(it.parsed.y) } } },
+        scales: { y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => mode === "yoy" ? v + "%" : v } }, x: { grid: { display: false } } } },
+    });
+    if (charts.cmpLong) charts.cmpLong.destroy();
+    const data = pts.map((p) => ({ x: p.y + 0.5, y: p.v }));
+    charts.cmpLong = new Chart($("cmpLongChart"), {
+      type: "line",
+      data: { datasets: [{ data, borderColor: TEAL, borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 3, tension: 0.15 }] },
+      options: {
+        parsing: false, interaction: { mode: "nearest", axis: "x", intersect: false },
+        scales: { x: { type: "linear", min: data[0] ? data[0].x - 0.5 : 1950, max: TARGET + 1, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 10 } },
+          y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => mode === "yoy" ? v + "%" : v } } },
+        plugins: { bands: { eras: eraBands(), bands: recBands, markers: nixonMarker(),
+            highlights: [{ from: TARGET, to: TARGET + 1, color: "rgba(143,188,152,0.18)", label: "2026", text: C26 },
+              { from: cmpYear, to: cmpYear + 1, color: "rgba(216,195,147,0.18)", label: String(cmpYear), text: CY }] },
+          tooltip: { callbacks: { title: (it) => Math.floor(it[0].parsed.x + 1e-6), label: (it) => " " + fmt(it.parsed.y) } } },
+      },
+    });
+  }
+
+
+  // ------------------------------------------------------------ EXPANSION CARDS
+  function usd0(v) { return isNum(v) ? "$" + Math.round(v).toLocaleString("en-US") : "–"; }
+  function usd1(v) { return isNum(v) ? "$" + Number(v).toLocaleString("en-US", { maximumFractionDigits: 1, minimumFractionDigits: 0 }) : "–"; }
+  function usdBn(v) { return isNum(v) ? "$" + Number(v).toLocaleString("en-US", { maximumFractionDigits: 1 }) + " bn" : "–"; }
+  function usdT(v) {
+    if (!isNum(v)) return "–";
+    if (Math.abs(v) >= 1e12) return "$" + (v / 1e12).toFixed(2) + "T";
+    if (Math.abs(v) >= 1e9) return "$" + (v / 1e9).toFixed(2) + "B";
+    return usd0(v);
+  }
+  function fmtCost(fmt, v) {
+    if (!isNum(v)) return "–";
+    if (fmt === "usd0") return usd0(v);
+    if (fmt === "x") return fx(v, 2) + "×";
+    if (fmt === "pct1") return fx(v, 1) + "%";
+    return fx(v, 1);
+  }
+  function renderExpansion() {
+    const X = D.expansion || {};
+    if (!X.available) { $("xcards").classList.add("hidden"); return; }
+    // Dollar
+    const Dlr = X.dollar || {};
+    $("xDollarSnaps").innerHTML = (Dlr.snapshots || []).map((s) =>
+      "<div class='xs'><div class='y'>$1 in " + s.year + "</div><div class='v'>$" + Number(s.value_today).toFixed(2) + "</div><div class='s'>buys the same as this today</div></div>"
+    ).join("");
+    const years = Object.keys(Dlr.cpi_by_year || {}).map(Number).sort((a, b) => a - b);
+    const sel = $("xCalcYear");
+    sel.innerHTML = years.map((y) => "<option value='" + y + "'" + (y === 1913 ? " selected" : "") + ">" + y + "</option>").join("");
+    const recalc = () => {
+      const y = +sel.value, amt = +$("xCalcAmt").value || 0, now = Dlr.today_cpi;
+      const snap = (Dlr.snapshots || []).find((s) => s.year === y);
+      const then = snap ? snap.cpi_then : Dlr.cpi_by_year[y];
+      if (!isNum(then) || !isNum(now) || !then) { $("xCalcOut").textContent = "–"; return; }
+      const v = amt * (now / then);
+      $("xCalcOut").innerHTML = "$" + amt.toLocaleString("en-US") + " in " + y + " ≈ <span style='color:var(--c2026b)'>" +
+        "$" + v.toLocaleString("en-US", { maximumFractionDigits: 2 }) + "</span> today <span class='muted'>(as of " + (Dlr.today_as_of || "") + ")</span>";
+    };
+    sel.onchange = recalc; $("xCalcAmt").oninput = recalc; recalc();
+    $("xDollarSrc").textContent = (Dlr.source || "") + " The four highlighted years use December CPI (the snapshot file); other years use that year's annual-average CPI, so neighbouring years can differ slightly.";
+
+    // Interest
+    const I = X.interest || {}, hy = I.headline_year || 2024, Y = (I.years || {})[hy] || (I.years || {})[String(hy)] || {};
+    $("xIntTitle").textContent = "FY" + hy + ": net interest $" + fx(I.interest_bn, 1) + " bn vs defense $" + fx(I.defense_bn, 1) + " bn";
+    $("xIntPair").innerHTML =
+      "<div class='xi interest'><div class='lbl'>Net interest</div><div class='v'>" + usdBn(I.interest_bn) + "</div><div class='sub'>" + usd0(I.interest_per_taxpayer) + " per taxpayer</div></div>" +
+      "<div class='xi'><div class='lbl'>Defense</div><div class='v'>" + usdBn(I.defense_bn) + "</div><div class='sub'>" + usd0(I.defense_per_taxpayer) + " per taxpayer</div></div>";
+    $("xIntCents").textContent = isNum(I.cents) ? (fx(I.cents, 1) + " cents of every individual income-tax dollar went to interest in FY" + hy + ".") : "";
+    $("xTaxYear").textContent = "(FY" + hy + ", per return filed)";
+    $("xIntSrc").textContent = (isNum(Y.total_outlays_per_taxpayer) ? ("Total federal spending was " + usd0(Y.total_outlays_per_taxpayer) + " per return vs " + usd0(Y.income_tax_per_taxpayer) +
+      " of individual income tax per return; the gap is covered by other taxes and borrowing. ") : "") + (I.source || "") + " Educational, not financial advice.";
+    const items = (Y.items || []).slice().sort((a, b) => b.per_taxpayer - a.per_taxpayer);
+    if (HAS_CHART && items.length) {
+      if (charts.xTax) charts.xTax.destroy();
+      charts.xTax = new Chart($("xTaxChart"), {
+        type: "bar",
+        data: { labels: items.map((it) => it.label), datasets: [{ data: items.map((it) => it.per_taxpayer),
+          backgroundColor: items.map((it) => it.label === "Net interest" ? "rgba(217,168,168,0.85)" : it.label === "Defense" ? "rgba(216,195,147,0.75)" : "rgba(143,188,152,0.7)"),
+          borderRadius: 6, barPercentage: 0.7 }] },
+        options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + usd0(c.parsed.x) + " / taxpayer" } } },
+          scales: { x: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => "$" + (v / 1000).toFixed(0) + "k" } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } } },
+      });
+    }
+
+    // Holders
+    const H = X.holders || {}, latest = H.latest || {};
+    $("xHolderFacts").innerHTML =
+      "<div class='xh'><div class='lbl'>Fed share, 2019</div><div class='v'>" + fx(H.fed_2019, 1) + "%</div></div>" +
+      "<div class='xh'><div class='lbl'>Fed share, 2020</div><div class='v'>" + fx(H.fed_2020, 1) + "%</div></div>" +
+      "<div class='xh'><div class='lbl'>Latest (" + (latest.y || "") + ")</div><div class='v'>Fed " + fx(latest.fed, 1) + "% · foreign " + fx(latest.foreign, 1) + "%</div></div>";
+    $("xHolderSrc").textContent = (H.source || "") + (H.foreign_peak ? (" Foreign share peaked at " + fx(H.foreign_peak.foreign, 1) + "% in " + H.foreign_peak.y + ".") : "");
+    if (HAS_CHART && (H.rows || []).length) {
+      if (charts.xHold) charts.xHold.destroy();
+      charts.xHold = new Chart($("xHolderChart"), {
+        type: "line",
+        data: { datasets: [
+          { label: "Fed share", data: H.rows.map((r) => ({ x: r.y + 0.5, y: r.fed })), borderColor: SAGE, borderWidth: 2, pointRadius: 0, tension: 0.15 },
+          { label: "Foreign share", data: H.rows.map((r) => ({ x: r.y + 0.5, y: r.foreign })), borderColor: SAND, borderWidth: 2, pointRadius: 0, tension: 0.15 },
+        ] },
+        options: { parsing: false, interaction: { mode: "nearest", axis: "x", intersect: false },
+          plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } },
+            tooltip: { callbacks: { title: (it) => Math.floor(it[0].parsed.x), label: (it) => " " + it.dataset.label + ": " + fx(it.parsed.y, 1) + "%" } } },
+          scales: { x: { type: "linear", grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 8 } },
+            y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => v + "%" } } } },
+      });
+    }
+
+    // Plumbing
+    const P = X.plumbing || {};
+    $("xPeaks").innerHTML = (P.peaks || []).map((p) =>
+      "<div class='xp'><div class='lbl'>" + p.label + "</div><div class='v'>$" + fx(p.bn, 1) + " bn</div><div class='d'>peak " + (p.date || "") + "</div></div>"
+    ).join("");
+    $("xPlumbSrc").textContent = P.source || "";
+    if (HAS_CHART && (P.annual || []).length) {
+      if (charts.xPlumb) charts.xPlumb.destroy();
+      const ann = P.annual;
+      charts.xPlumb = new Chart($("xPlumbChart"), {
+        type: "line",
+        data: { datasets: [
+          { label: "Reserves", data: ann.map((r) => ({ x: r.y + 0.5, y: r.reserves })), borderColor: SAGE, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
+          { label: "ON RRP", data: ann.map((r) => ({ x: r.y + 0.5, y: r.rrp })), borderColor: SAND, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
+          { label: "Primary credit", data: ann.map((r) => ({ x: r.y + 0.5, y: r.primary })), borderColor: ROSE, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
+          { label: "BTFP", data: ann.map((r) => ({ x: r.y + 0.5, y: r.btfp })), borderColor: TEAL, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
+        ] },
+        options: { parsing: false, interaction: { mode: "nearest", axis: "x", intersect: false },
+          plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } },
+            tooltip: { callbacks: { title: (it) => Math.floor(it[0].parsed.x), label: (it) => " " + it.dataset.label + ": $" + fx(it.parsed.y, 1) + " bn" } } },
+          scales: { x: { type: "linear", grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 8 } },
+            y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => "$" + v + "bn" } } } },
+      });
+    }
+
+    // Gold
+    const G = X.gold || {};
+    $("xGoldGrid").innerHTML =
+      "<div class='xg'><div class='lbl'>U.S. gold on the books</div><div class='v'>" + usdT(G.book_usd) + "</div><div class='sub'>" +
+        Number(G.oz).toLocaleString("en-US", { maximumFractionDigits: 0 }) + " oz × statutory $" + fx(G.statutory_price, 2) + "</div></div>" +
+      "<div class='xg'><div class='lbl'>Same gold at market</div><div class='v'>" + usdT(G.market_usd) + "</div><div class='sub'>at $" + Number(G.market_price).toLocaleString("en-US") + "/oz (" + (G.as_of || "") + ")</div></div>" +
+      "<div class='xg'><div class='lbl'>Official-sector flip</div><div class='v'>" +
+        (G.windows && G.windows.gfc_sell ? (signed(G.windows.gfc_sell.sum13, 0, " t/yr") + " → " + signed(G.windows.post_2010_buy.sum13, 0, " t/yr")) : "–") +
+      "</div><div class='sub'>1999–2009 avg → 2010–2021 avg (13-country proxy). Poland: " +
+        fx((G.poland_from || {}).moz, 1) + "M oz (" + ((G.poland_from || {}).y || "") + ") → " + fx((G.poland_to || {}).moz, 1) + "M oz (" + ((G.poland_to || {}).y || "") + ").</div></div>";
+    const s25 = (G.windows || {}).surge_2022_25;
+    $("xGoldProxy").innerHTML = "<strong>" + (G.proxy_label || "") + "</strong>" + (s25 ? (" Honest caveat: for " + s25.start + "–" + s25.end +
+      " the same proxy shows " + signed(s25.sum13, 0, " t/yr") + " across all 13 countries (the five biggest buyers alone: " + signed(s25.top5, 0, " t/yr") +
+      "). Higher gold prices and reserve revaluations make this reserve-based estimate unreliable for recent years, and it can't see unreported buying.") : "");
+    $("xGoldSrc").textContent = G.source || "";
+    $("xGoldWgc").innerHTML = (G.wgc_note || "") + (G.wgc_url ? " <a href='" + G.wgc_url + "' target='_blank' rel='noopener'>Open World Gold Council ↗</a>" : "");
+    if (HAS_CHART && (G.poland || []).length) {
+      // Chart 13-country net tonnes windows as bars + Poland holdings line from official_gold via poland array only;
+      // Better: show Poland holdings; for sum13 use windows as callout already.
+      if (charts.xGold) charts.xGold.destroy();
+      const wins = ["gfc_sell", "post_2010_buy", "surge_2022_25"].map((k) => G.windows[k]).filter(Boolean);
+      charts.xGold = new Chart($("xGoldChart"), {
+        type: "bar",
+        data: { labels: wins.map((w) => w.start + "–" + w.end), datasets: [{ label: "Avg net tonnes / year (13-country proxy)",
+          data: wins.map((w) => w.sum13), backgroundColor: wins.map((w) => w.sum13 < 0 ? "rgba(217,168,168,0.8)" : "rgba(143,188,152,0.8)"), borderRadius: 8, barPercentage: 0.55 }] },
+        options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + signed(c.parsed.y, 0, " t/yr") } } },
+          scales: { y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => v + " t" } }, x: { grid: { display: false } } } },
+      });
+    }
+
+    // Costs strip
+    $("xCostStrip").innerHTML = (X.costs || []).map((c) =>
+      "<article class='xc'><div class='lbl'>" + c.label + "</div><div class='pair'>" +
+        fmtCost(c.fmt, c.from) + " <span class='muted'>(" + c.from_y + ")</span> → <span>" + fmtCost(c.fmt, c.to) + "</span> <span class='muted'>(" + c.to_y + ")</span></div>" +
+        "<div class='sub'>" + (c.sub || "") + "</div><div class='src'>" + (c.source || "") + "</div></article>"
+    ).join("");
+  }
+
   // ------------------------------------------------------------ WHAT IT MEANS PER TAXPAYER
   // data/money.json -> per_taxpayer, built from data/per_taxpayer*.csv (definitions: docs/method.md)
   const usd = (v) => isNum(v) ? (v < 0 ? "−$" : "$") + fx(Math.abs(v), 0) : "–";
@@ -1103,11 +1527,15 @@
     renderSnapshot();
     initBuilder();
     renderMeta();
+    initRankFilter();
     whenVisible($("rankChart"), renderRanking);
     renderHistoryTabs();
     whenVisible($("historyChart"), updateHistory);
     renderMoney();
+    renderEras();
+    initCompare();
     renderPress();
+    renderExpansion();
     renderPerTaxpayer();
     initQR();
     document.querySelectorAll(".toggle[role=tablist] button[data-h]").forEach((b) => b.onclick = () => {

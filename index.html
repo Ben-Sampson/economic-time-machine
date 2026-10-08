@@ -29,8 +29,10 @@
         <a href="#machine">Time machine</a>
         <a href="#build">Build your 2026</a>
         <a href="#money">Money &amp; gold</a>
+        <a href="#eras">Monetary eras</a>
         <a href="#ranking">Ranking</a>
         <a href="#history">History</a>
+        <a href="#compare">Compare library</a>
         <a href="#press">Printing press</a>
         <a href="#method">Method</a>
       </nav>
@@ -212,8 +214,10 @@
         <div class="section-head">
           <p class="eyebrow">The leaderboard</p>
           <h2>Closest years to 2026</h2>
-          <p class="section-sub">Similarity score from 0 to 100, where higher means closer to 2026. Tap a bar to load that year into the time machine.</p>
+          <p class="section-sub">Similarity score from 0 to 100, where higher means closer to 2026. Tap a bar to load that year into the time machine. The 1950+ core score is unchanged; the long-history and era filters use a 9-feature score that reaches back to 1900.</p>
         </div>
+        <div class="chips chips-scroll" id="rankFilter" role="tablist" aria-label="Era filter"></div>
+        <p class="era-best" id="rankEraBest"></p>
         <div class="rank-grid">
           <div class="card">
             <div class="card-title" id="rankTitle">Top analog years</div>
@@ -286,26 +290,91 @@
     </section>
 
     <!-- 5. HISTORY -->
+
+    <!-- MONETARY ERAS -->
+    <section class="section" id="eras">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Monetary eras</p>
+          <h2>Four money regimes since 1900</h2>
+          <p class="section-sub">The dollar was tied to gold, then to a gold-exchange system, then to nothing. The charts below shade each era; the cards contrast the decades before and after Nixon closed the gold window in August 1971.</p>
+        </div>
+        <div class="era-timeline" id="eraTimeline" aria-label="Monetary eras"></div>
+        <p class="era-nixon" id="eraNixon"><span class="era-nixon-mark">Aug 15, 1971</span> Nixon closes the gold window. The dollar is no longer convertible into gold at a fixed price.</p>
+        <div class="era-contrasts" id="eraContrasts"></div>
+        <p class="fine" id="eraNote"></p>
+        <div class="era-callout card" id="eraCallout1929">
+          <p class="eyebrow">Long-history score · 9 features</p>
+          <h3>2026&rsquo;s closest gold-standard-era match is <span id="eraGoldYear">1929</span></h3>
+          <p class="section-sub" id="eraGoldSub"></p>
+          <div class="era-next" id="eraGoldNext"></div>
+          <p class="fine">This uses the long-history score (inflation, unemployment, long and short rates, CAPE, real S&amp;P change, recession share, M2 growth, gold growth) — fewer features than the 1950+ core score of 13. Pre-1948 unemployment figures are Census Historical Statistics estimates. History, not a forecast.</p>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="history">
       <div class="wrap">
         <div class="section-head">
-          <p class="eyebrow">76 years of context</p>
+          <p class="eyebrow">125 years of context</p>
           <h2>The long view</h2>
-          <p class="section-sub">Each indicator since 1950. Rose-tinted bands are U.S. recessions. The highlighted bands mark 2026 and the year loaded in the time machine.</p>
+          <p class="section-sub">Each indicator across the monetary eras. Soft tinted bands mark the gold standard, Gold Reserve Act / wartime, Bretton Woods and the fiat era. Rose bands are recessions. The gold line marks August 1971.</p>
         </div>
         <div class="history-controls">
           <div class="chips chips-scroll" id="historyTabs" role="tablist" aria-label="Indicator"></div>
           <div class="toggle" id="rangeToggle" aria-label="Time range">
-            <button class="active" data-from="1950">All</button>
+            <button data-from="1900">Since 1900</button>
+            <button class="active" data-from="1950">Since 1950</button>
             <button data-from="1990">Since 1990</button>
             <button data-from="2016">10 yrs</button>
           </div>
         </div>
+        <div class="era-legend" id="eraLegend"></div>
         <div class="card">
           <div class="card-title"><span id="historyTitle">Indicator</span> <span class="muted" id="historyNote"></span></div>
           <div class="chart-box chart-lg"><canvas id="historyChart" aria-label="Long-history line chart with recession shading"></canvas></div>
           <p class="fine" id="historyExplain"></p>
         </div>
+      </div>
+    </section>
+
+
+    <!-- COMPARE LIBRARY -->
+    <section class="section" id="compare">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Compare library</p>
+          <h2>Pick any series. Put 2026 next to any year.</h2>
+          <p class="section-sub">Extra series that aren&rsquo;t in the similarity score: silver, copper, lumber, food, beef, wages, rent, mortgages, credit cards, saving, debt and interest as a share of GDP, real GDP, payrolls, and more. Education CPI is a proxy for tuition. The Russell 2000 isn&rsquo;t included (FTSE Russell license; no public series).</p>
+        </div>
+        <div class="compare-controls">
+          <label class="field">
+            <span>Series</span>
+            <select id="cmpSeries"></select>
+          </label>
+          <label class="field">
+            <span>Compare 2026 to</span>
+            <select id="cmpYear"></select>
+          </label>
+          <div class="toggle" id="cmpMode" aria-label="Chart mode">
+            <button class="active" data-mode="auto" type="button">Auto</button>
+            <button data-mode="yoy" type="button">Yearly change</button>
+            <button data-mode="level" type="button">Level</button>
+          </div>
+        </div>
+        <p class="cmp-meta" id="cmpMeta"></p>
+        <div class="compare-grid">
+          <div class="card">
+            <div class="card-title">2026 vs <span id="cmpYearLabel">----</span> <span class="muted" id="cmpSideNote"></span></div>
+            <div class="chart-box chart-md"><canvas id="cmpSideChart" aria-label="Side-by-side values for 2026 and the chosen year"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Long run <span class="muted" id="cmpLongNote"></span></div>
+            <div class="chart-box chart-lg"><canvas id="cmpLongChart" aria-label="Long-run chart of the selected series"></canvas></div>
+          </div>
+        </div>
+        <p class="fine" id="cmpLicense"></p>
+        <p class="fine" id="cmpOmitted"></p>
       </div>
     </section>
 
@@ -342,6 +411,70 @@
             <div class="proj-grid" id="projGrid"></div>
             <p class="proj-formula" id="projFormula"><span class="info" tabindex="0" aria-describedby="projFormulaTip">&#9432; How is this calculated?<span class="tip" role="tooltip" id="projFormulaTip"></span></span></p>
             <p class="fine" id="projNote"></p>
+          </div>
+
+
+          <!-- EXPANSION: dollar / interest / holders / plumbing / gold / costs -->
+          <div class="xcards" id="xcards">
+            <div class="xcard" id="xDollar">
+              <p class="eyebrow">Your dollar since 1913</p>
+              <h3>What a 1913 dollar buys today</h3>
+              <div class="xsnap" id="xDollarSnaps"></div>
+              <div class="xcalc card">
+                <label class="ptx-label" for="xCalcYear">Pick a year</label>
+                <div class="xcalc-row">
+                  <select id="xCalcYear" aria-label="Base year"></select>
+                  <div class="ptx-input"><span>$</span><input id="xCalcAmt" type="number" min="0.01" step="1" value="1" aria-label="Amount then"></div>
+                </div>
+                <div class="xcalc-out" id="xCalcOut">–</div>
+                <p class="fine" id="xDollarSrc"></p>
+              </div>
+            </div>
+
+            <div class="xcard" id="xInterest">
+              <p class="eyebrow">Interest now costs more than the military</p>
+              <h3 id="xIntTitle">FY2024: net interest vs defense</h3>
+              <div class="xint-pair" id="xIntPair"></div>
+              <p class="xint-cents" id="xIntCents"></p>
+              <div class="card">
+                <div class="card-title">Where your tax dollar goes <span class="muted" id="xTaxYear"></span></div>
+                <div class="chart-box chart-md"><canvas id="xTaxChart" aria-label="Federal outlays per taxpayer by function"></canvas></div>
+                <p class="fine" id="xIntSrc"></p>
+              </div>
+            </div>
+
+            <div class="xcard" id="xHolders">
+              <p class="eyebrow">Who buys our debt</p>
+              <h3>The Fed and the rest of the world</h3>
+              <div class="xholder-facts" id="xHolderFacts"></div>
+              <div class="chart-box chart-md"><canvas id="xHolderChart" aria-label="Fed and foreign share of publicly held debt"></canvas></div>
+              <p class="fine" id="xHolderSrc"></p>
+            </div>
+
+            <div class="xcard" id="xPlumbing">
+              <p class="eyebrow">Printing you don't see</p>
+              <h3>Fed plumbing: reserves, reverse repo, emergency facilities</h3>
+              <div class="xpeaks" id="xPeaks"></div>
+              <div class="chart-box chart-md"><canvas id="xPlumbChart" aria-label="Fed facility balances over time"></canvas></div>
+              <p class="fine" id="xPlumbSrc"></p>
+            </div>
+
+            <div class="xcard" id="xGold">
+              <p class="eyebrow">Governments are buying gold</p>
+              <h3>U.S. gold on the books vs the market — and who is stocking up</h3>
+              <div class="xgold-grid" id="xGoldGrid"></div>
+              <div class="chart-box chart-md"><canvas id="xGoldChart" aria-label="Estimated official gold holdings, 13 countries"></canvas></div>
+              <p class="fine" id="xGoldProxy"></p>
+              <p class="fine" id="xGoldSrc"></p>
+              <p class="fine" id="xGoldWgc"></p>
+            </div>
+
+            <div class="xcard" id="xCosts">
+              <p class="eyebrow">Real-life costs</p>
+              <h3>Health, childcare, homes, and who owns what</h3>
+              <div class="xcost-strip" id="xCostStrip"></div>
+              <p class="fine">Educational project. Not financial advice. Numbers are historical arithmetic.</p>
+            </div>
           </div>
 
           <!-- WHAT IT MEANS PER TAXPAYER -->
@@ -420,8 +553,10 @@
           <li><span class="step-n">2</span><h3>Put them on one scale</h3><p>A 1-point move in unemployment and a $1 move in oil aren't comparable, so each indicator is converted to a "z-score": how many standard deviations it is from its long-run average.</p></li>
           <li><span class="step-n">3</span><h3>Measure the distance</h3><p>For every year from 1950 to 2025 we combine how far each indicator is from 2026's level (a weighted "straight-line" distance, equal weights). Smaller distance means a closer match.</p></li>
           <li><span class="step-n">4</span><h3>Score and rank</h3><p>Distances become a 0 to 100 similarity score (100 = identical, 0 = the farthest year). 2024 and 2025 are left out of the headline: they're neighbors, and their "what happened next" hasn't happened yet.</p></li>
+          <li><span class="step-n">5</span><h3>Look further back</h3><p>A separate long-history score reaches 1900 with 9 features that exist that far back (the 1950+ core score of 13 is unchanged). We also split the century into monetary eras — classical gold standard, Gold Reserve Act / wartime, Bretton Woods, and fiat after August 1971 — and rank the closest year inside each era.</p></li>
         </ol>
         <div class="method-notes card">
+          <p><strong>Long history and eras.</strong> A second score reaches back to 1900 using 9 features that exist that far (inflation, unemployment, long and short rates, CAPE, real S&amp;P change, recession share, M2 growth, gold growth). The 1950+ core score of 13 features is unchanged and remains the headline answer. Monetary eras follow the official gold price and convertibility: classical gold standard to 1933, Gold Reserve Act / wartime 1934–45, Bretton Woods to August 1971, and fiat afterward. Pre-1948 unemployment figures are Census Historical Statistics estimates. The Compare library charts extra series that are <em>not</em> in either score — purchasing power, who holds the debt, Fed plumbing, healthcare (CMS NHEA, AHRQ MEPS-IC), childcare (DOL NDCP), and an official-gold estimate from World Bank reserves. Education CPI is a tuition proxy. The health-insurance CPI had a BLS methodology break around late 2022; post-2022 YoY isn't comparable. Freddie Mac and NAR series are charts with citation only. KFF employer premiums and World Gold Council buying figures are link-only (no charts of their data). The Russell 2000 is omitted. A mislabelled FRED series (IR14270) was dropped.</p>
           <p><strong>Per-taxpayer numbers.</strong> A "taxpayer" is one individual income-tax return filed for that tax year (IRS Statistics of Income); "taxable only" counts returns that owed tax (from 1999). Average income tax = federal individual income-tax receipts for the fiscal year ÷ returns filed. New money = M2 in December minus M2 a year earlier; the Fed figure is the change in its total assets. Debt per taxpayer uses total public debt. Each year mixes calendars (December stocks, fiscal-year budgets, tax-year counts), so these are scale comparisons, not accounting identities. Values not yet published are carried forward from the latest year and footnoted. The debt clock extrapolates the last 12 months' pace from Treasury's Debt to the Penny and is an estimate.</p>
           <p><strong>Limits worth knowing.</strong> Some series start later than 1950 (money growth and gold in 1960, the dollar in 1973, the yield curve in 1976, home prices in 1987), so early years are compared on fewer indicators. 2026 is a partial year (data through <span id="methodLatest">the latest month</span>). Similar numbers don't mean similar causes, and no two eras are truly alike.</p>
           <p><strong>"If 2026 follows&hellip;" arithmetic.</strong> For an analog year Y we take the growth from December Y to December Y+2 in M2, the Fed balance sheet and the monetary base, and apply it to today's level: <em>implied added dollars = today's level &times; (level in Dec Y+2 &divide; level in Dec Y &minus; 1)</em>. It's what history would imply if the next two years repeated that era. It is historical arithmetic, not a forecast. The Fed balance sheet series (WALCL) starts in Dec 2002, so for earlier analog years only M2 and the monetary base are used.</p>
@@ -471,7 +606,12 @@
             <li><strong>FRED, Federal Reserve Bank of St. Louis.</strong> Public-domain series, cited as requested: CPI and unemployment (U.S. Bureau of Labor Statistics; <a href="https://fred.stlouisfed.org/series/CPIAUCSL" target="_blank" rel="noopener">CPIAUCSL</a>, <a href="https://fred.stlouisfed.org/series/UNRATE" target="_blank" rel="noopener">UNRATE</a>); Fed funds, 10-year yield, broad dollar and M2 (Board of Governors of the Federal Reserve System; <a href="https://fred.stlouisfed.org/series/FEDFUNDS" target="_blank" rel="noopener">FEDFUNDS</a>, <a href="https://fred.stlouisfed.org/series/GS10" target="_blank" rel="noopener">GS10</a>, <a href="https://fred.stlouisfed.org/series/TWEXBGSMTH" target="_blank" rel="noopener">TWEXBGSMTH</a>, <a href="https://fred.stlouisfed.org/series/M2SL" target="_blank" rel="noopener">M2SL</a>, monetary base <a href="https://fred.stlouisfed.org/series/BOGMBASE" target="_blank" rel="noopener">BOGMBASE</a>, Fed balance sheet <a href="https://fred.stlouisfed.org/series/WALCL" target="_blank" rel="noopener">WALCL</a>, monthly averages of weekly data); federal debt (U.S. Department of the Treasury, Fiscal Service; <a href="https://fred.stlouisfed.org/series/GFDEBTN" target="_blank" rel="noopener">GFDEBTN</a>, quarterly). Retrieved from FRED.</li>
             <li><strong>FRED, citation required:</strong> 10Y&minus;2Y spread, Federal Reserve Bank of St. Louis (<a href="https://fred.stlouisfed.org/series/T10Y2Y" target="_blank" rel="noopener">T10Y2Y</a>, monthly averages, charts only); WTI oil (<a href="https://fred.stlouisfed.org/series/WTISPLC" target="_blank" rel="noopener">WTISPLC</a>, shown as yearly % change; pre-2013 &copy; Dow Jones &amp; Company, from Aug 2013 U.S. Energy Information Administration); recession dates, Federal Reserve Bank of St. Louis based on NBER (<a href="https://fred.stlouisfed.org/series/USREC" target="_blank" rel="noopener">USREC</a>).</li>
             <li><strong>Per-taxpayer figures</strong> (public domain, cited as requested): taxpayer counts from the <a href="https://www.irs.gov/statistics/soi-tax-stats-individual-time-series-statistical-tables" target="_blank" rel="noopener">IRS, Statistics of Income</a> (individual returns filed; taxable returns); individual income-tax receipts from <a href="https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/" target="_blank" rel="noopener">OMB Historical Tables, Table 2.1</a>; receipts, deficit and interest from OMB via FRED (<a href="https://fred.stlouisfed.org/series/FYFSD" target="_blank" rel="noopener">FYFSD</a>, <a href="https://fred.stlouisfed.org/series/FYOINT" target="_blank" rel="noopener">FYOINT</a>, <a href="https://fred.stlouisfed.org/series/FYFR" target="_blank" rel="noopener">FYFR</a>); households and median household income from the U.S. Census Bureau via FRED (<a href="https://fred.stlouisfed.org/series/TTLHH" target="_blank" rel="noopener">TTLHH</a>, <a href="https://fred.stlouisfed.org/series/MEHOINUSA646N" target="_blank" rel="noopener">MEHOINUSA646N</a>); population from BEA via FRED (<a href="https://fred.stlouisfed.org/series/POPTHM" target="_blank" rel="noopener">POPTHM</a>); latest daily debt from U.S. Treasury, Fiscal Data, <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener">Debt to the Penny</a> (Oct 6, 2026). No agency endorses this project.</li>
-            <li><strong>World Bank</strong> Commodity Price Data (The Pink Sheet), monthly gold price, <a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener">worldbank.org</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (<a href="https://datacatalog.worldbank.org/search/dataset/0038238/commodity-prices-history-and-projections" target="_blank" rel="noopener">catalog entry</a>). Used as published; shown as monthly price and yearly % change.</li>
+            <li><strong>Long-history sources:</strong> U.S. Census Bureau, <em>Historical Statistics of the United States</em> (unemployment Series D 86; money stock Series X 415); official U.S. gold price via statute (Coinage Act; Gold Reserve Act of 1934); NBER commercial-paper rate via FRED (charts with citation only, no download).</li>
+            <li><strong>Compare library (public domain, cited as requested):</strong> BLS CPI/PPI/earnings/beef/rent/electricity/medical/daycare/health-insurance via FRED or BLS flat files; Federal Reserve Board revolving credit, delinquencies, industrial production and H.4.1 plumbing; BEA saving rate, real GDP and trade balance; OMB debt/deficit/interest-to-GDP; Census median home sale price and household income; Treasury debt-holder series; Fed DFA wealth shares; BLS purchasing-power and labor-force series; World Bank Pink Sheet silver and copper (CC BY 4.0).</li>
+            <li><strong>Compare library &amp; printing-press cards (public domain / CC BY, cited):</strong> CMS National Health Expenditure Accounts; AHRQ MEPS-Insurance Component; DOL Women&rsquo;s Bureau National Database of Childcare Prices; OMB Historical Tables 2.1 &amp; 3.1; Treasury Fiscal Data Status Report of U.S. Government Gold Reserve; Fed Distributional Financial Accounts; World Bank WDI reserves + Pink Sheet (CC BY 4.0) for the 13-country official-gold estimate.</li>
+            <li><strong>Compare library (citation required, charts + link only):</strong> Freddie Mac 30-year mortgage rate (<a href="https://fred.stlouisfed.org/series/MORTGAGE30US" target="_blank" rel="noopener">MORTGAGE30US</a>); National Association of Realtors housing affordability index (<a href="https://fred.stlouisfed.org/series/FIXHAI" target="_blank" rel="noopener">FIXHAI</a>, short window).</li>
+            <li><strong>Link-only (no charts of their data):</strong> <a href="https://www.kff.org/health-costs/report/employer-health-benefits-annual-survey/" target="_blank" rel="noopener">KFF Employer Health Benefits Survey</a> (CC BY-NC-ND); <a href="https://www.gold.org/goldhub" target="_blank" rel="noopener">World Gold Council Goldhub</a> (terms forbid redistribute). The Russell 2000 is not included (FTSE Russell license; no public FRED series).</li>
+            <li><strong>World Bank</strong> Commodity Price Data (The Pink Sheet), monthly gold, silver and copper prices, <a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener">worldbank.org</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (<a href="https://datacatalog.worldbank.org/search/dataset/0038238/commodity-prices-history-and-projections" target="_blank" rel="noopener">catalog entry</a>). Used as published; shown as monthly price and yearly % change.</li>
             <li><strong>Robert J. Shiller</strong>, <em>Irrational Exuberance</em> data (<a href="https://shillerdata.com/" target="_blank" rel="noopener">shillerdata.com</a>): CAPE (annual averages only) and real S&amp;P 500 (12- and 24-month % changes only). The S&amp;P 500 is a product of <a href="https://www.spglobal.com/spdji/" target="_blank" rel="noopener">S&amp;P Dow Jones Indices LLC</a>.</li>
             <li><strong>S&amp;P CoreLogic Case-Shiller U.S. National Home Price Index</strong>, &copy; S&amp;P Dow Jones Indices LLC, via FRED (<a href="https://fred.stlouisfed.org/series/CSUSHPISA" target="_blank" rel="noopener">CSUSHPISA</a>): shown only as yearly % change. Index levels are not published here.</li>
           </ul>

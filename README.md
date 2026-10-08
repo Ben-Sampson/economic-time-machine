@@ -29,6 +29,28 @@ No raw data files or data downloads are included.
   product of S&P Dow Jones Indices LLC.
 - **S&P CoreLogic Case-Shiller U.S. National Home Price Index** (S&P Dow Jones Indices
   LLC, via FRED): shown only as yearly % change.
+- **Long history (1900+)**: Census Historical Statistics of the United States (pre-1948
+  unemployment and related series); NBER short-rate chart only; World Bank Pink Sheet
+  agricultural commodities and copper (CC BY 4.0) where used. A separate 9-feature
+  long-history score and monetary-era filters sit alongside the unchanged 1950+ core
+  score of 13 features.
+- **Compare library (public domain / CC BY, cited)**: BLS CPI/PPI/earnings/beef/rent;
+  Fed Board revolving credit, delinquencies, industrial production; BEA saving rate
+  and real GDP; OMB debt/deficit/interest-to-GDP; World Bank Pink Sheet silver and
+  copper (CC BY 4.0).
+- **Compare library (citation required, chart + FRED link only)**: Freddie Mac 30-year
+  mortgage rate; NAR housing affordability index (short window). The Russell 2000 is
+  omitted (FTSE Russell license; no public FRED series).
+
+- **Printing-press cards & Expansion #2/#3 (public domain / CC BY, cited)**: BLS CPI-U NSA and
+  purchasing power (dollar since 1913); OMB Historical Tables 2.1 & 3.1 with IRS returns (interest vs
+  defense, outlays per taxpayer); Treasury/Fed debt holders; Fed H.4.1 plumbing (reserves, ON RRP,
+  discount window, BTFP); Treasury Fiscal Data gold reserve; World Bank WDI reserves + Pink Sheet
+  (13-country official-gold estimate, excludes unreported buying); CMS National Health Expenditure
+  Accounts; AHRQ MEPS-IC; DOL Women's Bureau National Database of Childcare Prices; BLS
+  health-insurance (method break ~late 2022) and daycare CPI; Fed Distributional Financial Accounts.
+- **Link-only, no charts of their data**: KFF Employer Health Benefits Survey (CC BY-NC-ND);
+  World Gold Council central-bank statistics (no redistribution).
 
 No government agency, data provider or index owner endorses this project. No agency
 seals or logos are used.
