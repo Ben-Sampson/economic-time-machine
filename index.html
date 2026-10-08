@@ -34,6 +34,7 @@
         <a href="#history">History</a>
         <a href="#wars">Wars</a>
         <a href="#compare">Compare library</a>
+        <a href="#story">Money story</a>
         <a href="#press">Printing press</a>
         <a href="#method">Method</a>
       </nav>
@@ -441,6 +442,154 @@
       </div>
     </section>
 
+    <!-- GUIDED MONEY STORY (lead-in to the printing press) -->
+    <section class="section story" id="story">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">The story in five steps</p>
+          <h2>Last time the economy looked like this, Washington reached for the printing press.</h2>
+          <p class="section-sub">A guided walk from today&rsquo;s data to 2008 and 2020: what the government did, how money actually gets created, and what rose alongside it. History, not a forecast. <strong>Not financial advice.</strong></p>
+        </div>
+        <div class="ms" id="ms">
+          <div class="ms-tabs" role="tablist" aria-label="Story steps">
+            <button type="button" role="tab" id="msTab1" aria-controls="msStep1" aria-selected="true" data-step="1"><span class="ms-n">1</span><span class="ms-t">2026 looks like 2007</span></button>
+            <button type="button" role="tab" id="msTab2" aria-controls="msStep2" aria-selected="false" tabindex="-1" data-step="2"><span class="ms-n">2</span><span class="ms-t">What Washington and the Fed did</span></button>
+            <button type="button" role="tab" id="msTab3" aria-controls="msStep3" aria-selected="false" tabindex="-1" data-step="3"><span class="ms-n">3</span><span class="ms-t">How money gets &ldquo;printed&rdquo;</span></button>
+            <button type="button" role="tab" id="msTab4" aria-controls="msStep4" aria-selected="false" tabindex="-1" data-step="4"><span class="ms-n">4</span><span class="ms-t">What rose, and what didn&rsquo;t</span></button>
+            <button type="button" role="tab" id="msTab5" aria-controls="msStep5" aria-selected="false" tabindex="-1" data-step="5"><span class="ms-n">5</span><span class="ms-t">If 2026 follows 2007</span></button>
+          </div>
+          <div class="ms-progress" aria-hidden="true"><span id="msBar"></span></div>
+
+          <!-- Step 1 -->
+          <article class="ms-step card" role="tabpanel" id="msStep1" aria-labelledby="msTab1" data-step="1">
+            <div class="ms-grid">
+              <div class="ms-copy">
+                <p class="ms-kicker">Step 1 of 5 &middot; 2026 looks like 2007</p>
+                <h3>2026 looks a lot like 2007.</h3>
+                <p>We boil every year since 1950 down to 13 averages, including inflation, unemployment, interest rates, stock valuations, oil, gold and money growth, and measure which past year sits closest to 2026. The closest historical match is 2007. Inflation, the 10-year interest rate, unemployment and money growth sit close to 2007&rsquo;s levels, but stocks are far more expensive today and gold is rising much faster. This is a resemblance, not a prediction: 2007 did not cause 2008, and 2026 is not obliged to repeat it.</p>
+                <div class="ms-key"><strong class="ms-key-v" id="msKey1">76 / 100</strong><span class="ms-key-sub" id="msKey1Sub">2007&rsquo;s similarity to 2026, the top historical match. Only 2025, the year next door, scores higher.</span></div>
+              </div>
+              <div class="ms-viz">
+                <div class="ms-viz-head">
+                  <div class="card-title" id="msChart1Title">Closest years to 2026 <span class="muted">(similarity, 0&ndash;100)</span></div>
+                  <div class="toggle" id="ms1Mode" role="group" aria-label="Step 1 chart">
+                    <button type="button" class="active" data-mode="rank">Closest years</button>
+                    <button type="button" data-mode="gaps">2007 vs 2026</button>
+                  </div>
+                </div>
+                <div class="chart-box ms-chart"><canvas id="msChart1" aria-label="Top ten years by similarity to 2026, with 2007 highlighted"></canvas></div>
+                <p class="fine" id="msChart1Note">Sand = 2007. Grey = recent years, shown as a sanity check only.</p>
+              </div>
+            </div>
+            <p class="ms-src">Source: The Economic Time Machine analog score (13 annual indicators, 1950&ndash;2026 year to date), built from FRED (BLS, Federal Reserve Board, St. Louis Fed), Robert J. Shiller and World Bank data. Shiller CAPE is used as annual values only.</p>
+          </article>
+
+          <!-- Step 2 -->
+          <article class="ms-step card" role="tabpanel" id="msStep2" aria-labelledby="msTab2" data-step="2" hidden>
+            <div class="ms-grid">
+              <div class="ms-copy">
+                <p class="ms-kicker">Step 2 of 5 &middot; What Washington and the Fed did</p>
+                <h3>When 2008 hit, Washington and the Fed went all in.</h3>
+                <p>The Federal Reserve cut its key interest rate from about 5% to nearly zero by December 2008 and held it there for seven years. It made emergency loans to banks and markets first, then bought bonds with newly created money in three rounds of quantitative easing (QE). Congress added the TARP bank rescue and stimulus spending, and the federal deficit rose almost ninefold in two years. By 2014 the Fed&rsquo;s balance sheet was about five times its pre-crisis size.</p>
+                <div class="ms-key"><strong class="ms-key-v" id="msKey2">$906 billion &rarr; $2.2 trillion in four months</strong><span class="ms-key-sub" id="msKey2Sub">The Fed&rsquo;s balance sheet, Aug to Dec 2008 (+145%). It reached $4.5 trillion by Jan 2015.</span></div>
+                <details class="ms-terms">
+                  <summary>Terms used here</summary>
+                  <p><b>Fed balance sheet:</b> everything the Federal Reserve owns (mostly bonds and loans), paid for with money the Fed creates.</p>
+                  <p><b>QE (quantitative easing):</b> the Fed buying large amounts of government and mortgage bonds with newly created money, to push long-term interest rates down.</p>
+                  <p><b>TARP:</b> the Troubled Asset Relief Program, Congress&rsquo;s 2008 bank-rescue fund. $700 billion authorized (later cut to $475 billion), $444 billion paid out and mostly repaid; CBO puts the final cost at about $31 billion.</p>
+                </details>
+              </div>
+              <div class="ms-viz">
+                <div class="card-title">The 2008 response, 2006&ndash;2016 <span class="muted">(US$ trillions; Fed funds rate on the right)</span></div>
+                <div class="chart-box ms-chart"><canvas id="msChart2" aria-label="Fed balance sheet, M2 and federal debt 2006 to 2016 with the Fed funds rate and QE start dates"></canvas></div>
+                <p class="fine" id="msChart2Note">Dashed lines = QE start dates (Fed press releases). Rose band = recession.</p>
+              </div>
+            </div>
+            <div class="ms-wide">
+              <div class="card-title">How big were the programs? <span class="muted">(sizes, not costs, unless marked)</span></div>
+              <div class="ms-table-wrap"><table class="ms-table" id="msPrograms"></table></div>
+              <p class="fine" id="msProgramsNote"></p>
+            </div>
+            <p class="ms-src" id="msSrc2">Source: Board of Governors of the Federal Reserve System (H.4.1 WALCL; H.15 FEDFUNDS; FOMC press releases), U.S. Treasury Fiscal Service (GFDEBTN), OMB (FYFSD) and IRS Statistics of Income (returns filed), via FRED and agency sites. Program sizes: CBO, U.S. Treasury, IRS Data Book 2021, SBA and the SBA Inspector General, and Fed press releases (linked in each row). Per-taxpayer figures are our arithmetic.</p>
+          </article>
+
+          <!-- Step 3 -->
+          <article class="ms-step card" role="tabpanel" id="msStep3" aria-labelledby="msTab3" data-step="3" hidden>
+            <div class="ms-grid">
+              <div class="ms-copy">
+                <p class="ms-kicker">Step 3 of 5 &middot; How money gets &ldquo;printed&rdquo;</p>
+                <h3>How money actually gets &ldquo;printed&rdquo;. Hint: almost none of it is paper.</h3>
+                <p>When the Treasury spends more than it collects in taxes, it sells bonds. In QE the Fed buys bonds from banks and investors and pays by adding digital dollars, called reserves, to banks&rsquo; accounts at the Fed: no printing press, just a keystroke. Reserves become money people can spend (M2: cash, checking and savings accounts) only when banks lend more or the government spends more. That is the big difference between 2008 and 2020.</p>
+                <div class="ms-key"><strong class="ms-key-v" id="msKey3">+26.8%</strong><span class="ms-key-sub" id="msKey3Sub">M2&rsquo;s growth in the 12 months to February 2021, versus a 2009&ndash;14 average of about 6.6% a year.</span></div>
+              </div>
+              <div class="ms-viz">
+                <div class="card-title">Bank reserves vs. the money people hold (M2), 2003&ndash;2026 <span class="muted">(US$ trillions, annual averages)</span></div>
+                <div class="chart-box ms-chart"><canvas id="msChart3" aria-label="Bank reserves at the Fed versus M2, annual averages 2003 to 2026"></canvas></div>
+                <p class="fine">2026 = year to date. Reserves = reserve balances with Federal Reserve Banks (WRESBAL).</p>
+              </div>
+            </div>
+            <div class="ms-wide">
+              <div class="ms-flow" id="msFlow" role="img" aria-label="Flow diagram: the Treasury sells bonds; the Fed buys them with new reserves. 2008 to 2014: reserves mostly sat in banks. 2020 to 2021: checks and PPP landed in deposits and pushed M2 up."></div>
+            </div>
+            <p class="ms-src">Source: Board of Governors of the Federal Reserve System, H.4.1 (WRESBAL reserve balances, WALCL total assets) and H.6 (M2SL), via FRED; OMB (FYFSD) for deficits; IRS Data Book 2021 (stimulus checks); U.S. Small Business Administration and SBA Inspector General (PPP).</p>
+          </article>
+
+          <!-- Step 4 -->
+          <article class="ms-step card" role="tabpanel" id="msStep4" aria-labelledby="msTab4" data-step="4" hidden>
+            <div class="ms-grid">
+              <div class="ms-copy">
+                <p class="ms-kicker">Step 4 of 5 &middot; What rose, and what didn&rsquo;t</p>
+                <h3>What rose alongside the new money, and what didn&rsquo;t.</h3>
+                <p id="msCopy4a">After 2008, gold rose about 50% in five years and was up 117% at its September 2011 peak, then fell 39% by late 2015 even as the Fed kept buying. Stocks rose about 106% over those five years, but that was a rebound from a 51% crash; home prices kept falling into 2012, about 26% below their 2007 peak, and consumer prices rose only about 1.6% a year from 2009 to 2014.</p>
+                <p id="msCopy4b">After 2020 the money reached people, and prices moved faster: from December 2019 to December 2021 stocks rose about 47%, home prices 32% and gold 21%, and inflation hit 9.0% in June 2022, the highest since November 1981. Whether the new money caused these moves is still debated: falling interest rates (the 10-year Treasury yield went from about 4.1% in late 2007 to 0.62% in July 2020) and pandemic supply shortages also played a part, and most economists think it was a mix.</p>
+                <div class="ms-key"><strong class="ms-key-v" id="msKey4">9.0%</strong><span class="ms-key-sub" id="msKey4Sub">Consumer-price inflation in June 2022, the highest since November 1981. After 2008 it averaged about 1.6% a year (2009&ndash;14).</span></div>
+              </div>
+              <div class="ms-viz">
+                <div class="card-title">Money growth vs. hard assets since 2000 <span class="muted">(% change vs a year earlier)</span></div>
+                <div class="chart-box ms-chart"><canvas id="msChart4" aria-label="M2 growth, gold, home prices and inflation, percent change from a year earlier, 2000 to 2026, with the two printing windows shaded"></canvas></div>
+                <p class="fine">Shaded: Dec 2008 &ndash; Dec 2013 and Dec 2019 &ndash; Dec 2021. Home prices = Case-Shiller, % change only. The S&amp;P 500 is not charted; it appears below as % changes only.</p>
+              </div>
+            </div>
+            <div class="ms-wide">
+              <div class="card-title">Change over each window <span class="muted">(all % changes)</span></div>
+              <div class="ms-table-wrap"><table class="ms-table ms-pct" id="msWindows"></table></div>
+            </div>
+            <p class="ms-src">Source: World Bank Pink Sheet (gold, CC BY 4.0); Robert J. Shiller (S&amp;P Composite, % changes only); S&amp;P Cotality Case-Shiller U.S. National Home Price Index &copy; S&amp;P Dow Jones Indices LLC, via FRED (% changes only); BLS CPI-U via FRED; Federal Reserve Board (M2SL, GS10) via FRED. Not financial advice.</p>
+          </article>
+
+          <!-- Step 5 -->
+          <article class="ms-step card" role="tabpanel" id="msStep5" aria-labelledby="msTab5" data-step="5" hidden>
+            <div class="ms-grid">
+              <div class="ms-copy">
+                <p class="ms-kicker">Step 5 of 5 &middot; If 2026 follows 2007</p>
+                <h3>If 2026 follows 2007, here is the historical arithmetic.</h3>
+                <p class="ms-label"><span>Historical arithmetic, not a forecast</span><span>Not financial advice</span></p>
+                <p id="msCopy5">From December 2007 to December 2009, federal debt grew 33.4%, the Fed&rsquo;s balance sheet 150.5% and M2 13.7%. Applied to today&rsquo;s levels, the same percentages would add about $13.4 trillion of federal debt, $10.2 trillion to the Fed&rsquo;s balance sheet and $3.2 trillion of M2. That would take the balance sheet to about $16.9 trillion, almost double its all-time peak of $8.95 trillion (April 2022): a repeat would be an enormous policy choice, not an automatic outcome.</p>
+                <div class="ms-key"><strong class="ms-key-v" id="msKey5">$13.4 trillion</strong><span class="ms-key-sub" id="msKey5Sub">Federal debt added at the 2007-to-2009 pace on today&rsquo;s base (&asymp; $83,745 per taxpayer).</span></div>
+              </div>
+              <div class="ms-viz">
+                <div class="card-title">If 2026 follows 2007: implied additions <span class="muted">(US$ per taxpayer)</span></div>
+                <div class="chart-box ms-chart ms-chart-sm"><canvas id="msChart5" aria-label="Implied additions per taxpayer if 2026 repeats 2007 to 2009 growth, next to average federal income tax per taxpayer"></canvas></div>
+                <p class="fine" id="msChart5Note">Taxpayer = one individual income-tax return filed; a joint return counts once.</p>
+                <div class="ms-next-links">
+                  <a href="#press">The printing-press numbers &darr;</a>
+                  <a href="#ptx">Per taxpayer and the debt clock &darr;</a>
+                  <a href="#xGold">Gold through the eras &darr;</a>
+                </div>
+              </div>
+            </div>
+            <p class="ms-src" id="msSrc5">Source: Federal Reserve Board (WALCL, M2SL) and U.S. Treasury (GFDEBTN; Debt to the Penny) via FRED and Fiscal Data; IRS Statistics of Income (returns filed). Per-taxpayer figures are our arithmetic. Historical arithmetic, not a forecast. Not financial advice.</p>
+          </article>
+
+          <div class="ms-nav">
+            <button type="button" class="ms-btn" id="msPrev" disabled>&larr; Previous</button>
+            <span class="ms-count" id="msCount" aria-live="polite">Step 1 of 5</span>
+            <button type="button" class="ms-btn ms-btn-next" id="msNext">Next &rarr;</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- THE PRINTING PRESS (closing section) -->
     <section class="section press" id="press">
       <div class="wrap">
@@ -637,6 +786,7 @@
           <p><strong>Limits worth knowing.</strong> Some series start later than 1950 (money growth and gold in 1960, the dollar in 1973, the yield curve in 1976, home prices in 1987), so early years are compared on fewer indicators. 2026 is a partial year (data through <span id="methodLatest">the latest month</span>). Similar numbers don't mean similar causes, and no two eras are truly alike.</p>
           <p><strong>"If 2026 follows&hellip;" arithmetic.</strong> For an analog year Y we take the growth from December Y to December Y+2 in M2, the Fed balance sheet and the monetary base, and apply it to today's level: <em>implied added dollars = today's level &times; (level in Dec Y+2 &divide; level in Dec Y &minus; 1)</em>. It's what history would imply if the next two years repeated that era. It is historical arithmetic, not a forecast. The Fed balance sheet series (WALCL) starts in Dec 2002, so for earlier analog years only M2 and the monetary base are used.</p>
           <p><strong>&ldquo;What happened next&rdquo; horizons.</strong> For a selected year Y (1950 on) we compare December Y with December 12, 24 and 120 months later: M2 (FRED M2SL), gold (World Bank Pink Sheet monthly average from 1960, the official $35 price before) and the S&amp;P 500 (Shiller, nominal and inflation-adjusted, price only). For years before 1950 the same horizons use annual averages (Y to Y+1, Y+2, Y+10), with M2 from Census <em>Historical Statistics</em> Series X 415 (1903&ndash;1958). The two M2 series use different definitions, so no change is computed across 1958&ndash;59, and a horizon that hasn&rsquo;t finished yet says so. The S&amp;P 500 appears only as % changes, never as a rebased path. Historical arithmetic, not a forecast.</p>
+          <p><strong>The money story and crisis programs.</strong> The five-step story above the printing press reuses this site&rsquo;s own data (analog score, Fed balance sheet, M2, federal debt, Fed funds rate, gold, inflation) plus a table of crisis-program sizes. Program sizes come from the original documents: CBO cost estimates and reports (TARP final report 2024; ARRA 2015; COVID-19 laws 2021), U.S. Treasury (TARP monthly report, 2008 rebate tally), the IRS Data Book 2021 (stimulus checks), the SBA PPP report and SBA Inspector General (PPP approvals and forgiveness), GAO, and Federal Reserve press releases and H.4.1 data (QE dates and amounts; bonds bought = change in securities held outright over each round). Fed rows are assets bought or loans made with new reserves, not spending, and rows overlap, so they are not added up. TARP shows both the $444B paid out and CBO&rsquo;s $31B final cost. Per taxpayer = amount &divide; IRS individual returns filed in the year the law passed or the Fed announced the program. Step 4 reports gold, S&amp;P 500 and Case-Shiller home prices as % changes only. Step 5 repeats Dec 2007 &rarr; Dec 2009 growth on today&rsquo;s levels: historical arithmetic, not a forecast.</p>
           <p><strong>Wars and conflicts.</strong> Conflict dates and legal basis come from the U.S. Department of State Office of the Historian, the Congressional Research Service (<em>Instances of Use of U.S. Armed Forces Abroad</em>, R42738; declarations and authorizations, RL31133; IN12571 and IN12678 on Iran), the VA&rsquo;s periods of war (38 CFR 3.2) and War Powers letters to Congress published on govinfo. The 2026 Iran row is labelled by what it legally is: hostilities without a declaration of war or a congressional authorization, ongoing as of Oct 8, 2026, so its numbers are year-to-date. For each major war, debt and deficits run from the end of the fiscal year before the war began to the end of the fiscal year in which it ended (OMB Historical Tables; before 1940, Census <em>Historical Statistics</em> Series Y 493, with Series F 1 GNP as the denominator). M2, inflation, gold and the S&amp;P 500 use calendar years. The event study runs from the year before the war began (t&minus;1) to five years after (t+5); the S&amp;P 500 appears only as % changes. Debt and M2 changes during a war are <em>not</em> the cost of the war: they include everything else happening in the budget and the economy. Where they exist, CRS estimates of military operations costs (RS22926) are shown alongside.</p>
           <p class="muted small" id="methodFeatures"></p>
         </div>
@@ -685,11 +835,12 @@
             <li><strong>FRED, citation required:</strong> 10Y&minus;2Y spread, Federal Reserve Bank of St. Louis (<a href="https://fred.stlouisfed.org/series/T10Y2Y" target="_blank" rel="noopener">T10Y2Y</a>, monthly averages, charts only); WTI oil (<a href="https://fred.stlouisfed.org/series/WTISPLC" target="_blank" rel="noopener">WTISPLC</a>, shown as yearly % change; pre-2013 &copy; Dow Jones &amp; Company, from Aug 2013 U.S. Energy Information Administration); recession dates, Federal Reserve Bank of St. Louis based on NBER (<a href="https://fred.stlouisfed.org/series/USREC" target="_blank" rel="noopener">USREC</a>).</li>
             <li><strong>Per-taxpayer figures</strong> (public domain, cited as requested): taxpayer counts from the <a href="https://www.irs.gov/statistics/soi-tax-stats-individual-time-series-statistical-tables" target="_blank" rel="noopener">IRS, Statistics of Income</a> (individual returns filed; taxable returns); individual income-tax receipts from <a href="https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/" target="_blank" rel="noopener">OMB Historical Tables, Table 2.1</a>; receipts, deficit and interest from OMB via FRED (<a href="https://fred.stlouisfed.org/series/FYFSD" target="_blank" rel="noopener">FYFSD</a>, <a href="https://fred.stlouisfed.org/series/FYOINT" target="_blank" rel="noopener">FYOINT</a>, <a href="https://fred.stlouisfed.org/series/FYFR" target="_blank" rel="noopener">FYFR</a>); households and median household income from the U.S. Census Bureau via FRED (<a href="https://fred.stlouisfed.org/series/TTLHH" target="_blank" rel="noopener">TTLHH</a>, <a href="https://fred.stlouisfed.org/series/MEHOINUSA646N" target="_blank" rel="noopener">MEHOINUSA646N</a>); population from BEA via FRED (<a href="https://fred.stlouisfed.org/series/POPTHM" target="_blank" rel="noopener">POPTHM</a>); latest daily debt from U.S. Treasury, Fiscal Data, <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener">Debt to the Penny</a> (Oct 6, 2026). No agency endorses this project.</li>
             <li><strong>Long-history sources:</strong> U.S. Census Bureau, <em>Historical Statistics of the United States</em> (unemployment Series D 86; money stock Series X 415); official U.S. gold price via statute (Coinage Act; Gold Reserve Act of 1934); NBER commercial-paper rate via FRED (charts with citation only, no download).</li>
+            <li><strong>Money story and crisis programs (U.S. government works, public domain, cited):</strong> Congressional Budget Office (<a href="https://www.cbo.gov/publication/59919" target="_blank" rel="noopener">TARP final report</a>, <a href="https://www.cbo.gov/publication/49958" target="_blank" rel="noopener">ARRA</a>, <a href="https://www.cbo.gov/publication/57343" target="_blank" rel="noopener">COVID-19 laws</a>); U.S. Treasury (<a href="https://home.treasury.gov/system/files/initiatives/financial-stability/reports/Documents/2020.04%20April%20Monthly%20Report%20to%20Congress.pdf" target="_blank" rel="noopener">TARP report to Congress</a>, <a href="https://home.treasury.gov/news/press-releases/hp1351" target="_blank" rel="noopener">2008 rebates</a>); IRS (<a href="https://www.irs.gov/pub/irs-prior/p55b--2022.pdf" target="_blank" rel="noopener">Data Book 2021</a>); U.S. Small Business Administration (PPP report, <a href="https://web.archive.org/web/20211230182145/https://www.sba.gov/sites/default/files/2021-06/PPP_Report_Public_210531-508.pdf" target="_blank" rel="noopener">archived copy</a>) and <a href="https://www.sba.gov/document/report-25-12-sbas-actions-address-forgiven-ppp-loans-subsequently-flagged-potentially-ineligible" target="_blank" rel="noopener">SBA Inspector General</a>; <a href="https://files.gao.gov/reports/GAO%E2%80%9124%E2%80%91107175/index.html" target="_blank" rel="noopener">GAO</a>; Federal Reserve Board <a href="https://www.federalreserve.gov/newsevents/pressreleases.htm" target="_blank" rel="noopener">press releases</a> and <a href="https://www.federalreserve.gov/releases/h41/" target="_blank" rel="noopener">H.4.1</a> (reserve balances <a href="https://fred.stlouisfed.org/series/WRESBAL" target="_blank" rel="noopener">WRESBAL</a>, securities held <a href="https://fred.stlouisfed.org/series/WSHOSHO" target="_blank" rel="noopener">WSHOSHO</a>, via FRED).</li>
             <li><strong>Wars and conflicts (public domain, cited):</strong> U.S. Department of State, <a href="https://history.state.gov/milestones" target="_blank" rel="noopener">Office of the Historian</a>; Congressional Research Service (<a href="https://www.congress.gov/crs-product/R42738" target="_blank" rel="noopener">R42738</a>, <a href="https://www.congress.gov/crs-product/RL31133" target="_blank" rel="noopener">RL31133</a>, <a href="https://www.congress.gov/crs_external_products/IN/PDF/IN12571/IN12571.1.pdf" target="_blank" rel="noopener">IN12571</a>, <a href="https://www.congress.gov/crs_external_products/IN/PDF/IN12678/IN12678.5.pdf" target="_blank" rel="noopener">IN12678</a>; war costs from <a href="https://www.everycrsreport.com/reports/RS22926.html" target="_blank" rel="noopener">RS22926</a>); War Powers letters on <a href="https://www.govinfo.gov/content/pkg/CDOC-119hdoc167/html/CDOC-119hdoc167.htm" target="_blank" rel="noopener">govinfo</a>; VA periods of war (<a href="https://www.ecfr.gov/current/title-38/chapter-I/part-3/section-3.2" target="_blank" rel="noopener">38 CFR 3.2</a>); <a href="https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/" target="_blank" rel="noopener">OMB Historical Tables</a> 1.1, 1.2, 3.1 and 7.1; U.S. Treasury, Fiscal Data, <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener">Debt to the Penny</a>; U.S. Census Bureau, <a href="https://www.census.gov/library/publications/1975/compendia/hist_stats_colonial-1970.html" target="_blank" rel="noopener"><em>Historical Statistics of the United States</em></a> (Series Y 466&ndash;467, Y 493, F 1, Y 393/402) and historical population estimates.</li>
             <li><strong>Compare library (public domain, cited as requested):</strong> BLS CPI/PPI/earnings/beef/rent/electricity/medical/daycare/health-insurance via FRED or BLS flat files; Federal Reserve Board revolving credit, delinquencies, industrial production and H.4.1 plumbing; BEA saving rate, real GDP and trade balance; OMB debt/deficit/interest-to-GDP; Census median home sale price and household income; Treasury debt-holder series; Fed DFA wealth shares; BLS purchasing-power and labor-force series; World Bank Pink Sheet silver and copper (CC BY 4.0).</li>
             <li><strong>Compare library &amp; printing-press cards (public domain / CC BY, cited):</strong> CMS National Health Expenditure Accounts; AHRQ MEPS-Insurance Component; DOL Women&rsquo;s Bureau National Database of Childcare Prices; OMB Historical Tables 2.1 &amp; 3.1; Treasury Fiscal Data Status Report of U.S. Government Gold Reserve; Fed Distributional Financial Accounts; International Monetary Fund, International Financial Statistics, official reserve gold (RAFAGOLDV_OZT, accessed via <a href="https://db.nomics.world/IMF/IFS" target="_blank" rel="noopener">DBnomics</a>; reuse with attribution; tonnes and net flows are our calculation).</li>
             <li><strong>Compare library (citation required, charts + link only):</strong> Freddie Mac 30-year mortgage rate (<a href="https://fred.stlouisfed.org/series/MORTGAGE30US" target="_blank" rel="noopener">MORTGAGE30US</a>); National Association of Realtors housing affordability index (<a href="https://fred.stlouisfed.org/series/FIXHAI" target="_blank" rel="noopener">FIXHAI</a>, short window).</li>
-            <li><strong>Link-only (no charts of their data):</strong> <a href="https://www.kff.org/health-costs/report/employer-health-benefits-annual-survey/" target="_blank" rel="noopener">KFF Employer Health Benefits Survey</a> (CC BY-NC-ND); <a href="https://www.gold.org/goldhub" target="_blank" rel="noopener">World Gold Council Goldhub</a> (terms forbid redistribute). The Russell 2000 is not included (FTSE Russell license; no public FRED series).</li>
+            <li><strong>Link-only (no charts of their data):</strong> <a href="https://www.kff.org/series/employer-health-benefits-survey/" target="_blank" rel="noopener">KFF Employer Health Benefits Survey</a> (CC BY-NC-ND); <a href="https://www.gold.org/goldhub" target="_blank" rel="noopener">World Gold Council Goldhub</a> (terms forbid redistribute). The Russell 2000 is not included (FTSE Russell license; no public FRED series).</li>
             <li><strong>World Bank</strong> Commodity Price Data (The Pink Sheet), monthly gold, silver and copper prices, <a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener">worldbank.org</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (<a href="https://datacatalog.worldbank.org/search/dataset/0038238/commodity-prices-history-and-projections" target="_blank" rel="noopener">catalog entry</a>). Used as published; shown as monthly price and yearly % change.</li>
             <li><strong>Robert J. Shiller</strong>, <em>Irrational Exuberance</em> data (<a href="https://shillerdata.com/" target="_blank" rel="noopener">shillerdata.com</a>): CAPE (annual averages only) and real S&amp;P 500 (12- and 24-month % changes only). The S&amp;P 500 is a product of <a href="https://www.spglobal.com/spdji/" target="_blank" rel="noopener">S&amp;P Dow Jones Indices LLC</a>.</li>
             <li><strong>S&amp;P CoreLogic Case-Shiller U.S. National Home Price Index</strong>, &copy; S&amp;P Dow Jones Indices LLC, via FRED (<a href="https://fred.stlouisfed.org/series/CSUSHPISA" target="_blank" rel="noopener">CSUSHPISA</a>): shown only as yearly % change. Index levels are not published here.</li>

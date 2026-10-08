@@ -97,12 +97,12 @@
     return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   }
   async function loadData() {
-    const names = ["series", "annual", "what_next", "analogs", "money", "eras", "long_annual", "analogs_long", "compare_library", "expansion", "wars"];
+    const names = ["series", "annual", "what_next", "analogs", "money", "eras", "long_annual", "analogs_long", "compare_library", "expansion", "wars", "story"];
     try {
       if (location.protocol === "file:") throw new Error("file");
       const got = await Promise.all(names.map((n) => fetch("data/" + n + ".json", { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(n); return r.json(); })));
       return { series: got[0], annual: got[1], whatNext: got[2], analogs: got[3], money: got[4],
-        eras: got[5], longAnnual: got[6], analogsLong: got[7], compareLibrary: got[8], expansion: got[9], wars: got[10] };
+        eras: got[5], longAnnual: got[6], analogsLong: got[7], compareLibrary: got[8], expansion: got[9], wars: got[10], story: got[11] };
     } catch (e) {
       await loadScript("data/bundle.js");
       return window.MACRO_DATA;
@@ -1230,7 +1230,7 @@
     const present = new Set((C.not_included || []).map((e) => e.id));
     const omit = omitIds.filter((id) => present.has(id)).map((id) => WHY[id]).join("; ");
     $("cmpOmitted").innerHTML = (omit ? "Not included: " + omit + ". " : "") +
-      "Link-only (no charts of their data): <a href='https://www.kff.org/health-costs/report/employer-health-benefits-annual-survey/' target='_blank' rel='noopener'>KFF Employer Health Benefits Survey</a> (CC BY-NC-ND) and " +
+      "Link-only (no charts of their data): <a href='https://www.kff.org/series/employer-health-benefits-survey/' target='_blank' rel='noopener'>KFF Employer Health Benefits Survey</a> (CC BY-NC-ND) and " +
       "<a href='https://www.gold.org/goldhub' target='_blank' rel='noopener'>World Gold Council central-bank buying</a> (terms forbid redistribution). " +
       "Dropped: FRED IR14270, which was mislabelled as a gold-reserves share but is a BLS import price index.";
     fillCmpYears();
@@ -1850,6 +1850,212 @@
     $("warTableSources").innerHTML = srcLine(W.table_sources);
   }
 
+  // ------------------------------------------------------------ GUIDED MONEY STORY (5 steps)
+  let msStep = 1;
+  const MS_N = 5, msDone = {};
+  const MS_TITLES = ["2026 looks like 2007", "What Washington and the Fed did", "How money gets \u201cprinted\u201d", "What rose, and what didn\u2019t", "If 2026 follows 2007"];
+  const msT = (bn, d) => "$" + fx(bn / 1000, d == null ? 1 : d) + "T";
+  function renderStory() {
+    const S = D.story || {};
+    if (!S.available) { $("story").classList.add("hidden"); return; }
+    const F = S.facts || {};
+    // key numbers from the data (the static HTML carries the same approved values as a fallback)
+    const r07 = analogRow(2007), r25 = analogRow(2025), r06 = analogRow(2006);
+    if (r07 && isNum(r07.similarity_score)) {
+      $("msKey1").textContent = fx(r07.similarity_score, 0) + " / 100";
+      $("msKey1Sub").innerHTML = "2007&rsquo;s similarity to 2026, the top historical match. Only 2025, the year next door, scores higher" +
+        (r25 && isNum(r25.similarity_score) ? " (" + fx(r25.similarity_score, 0) + ")" : "") + "." +
+        (r06 && isNum(r06.similarity_score) ? " 2006 is a near tie (" + fx(r06.similarity_score, 2) + " vs " + fx(r07.similarity_score, 2) + ")." : "");
+    }
+    $("msKey2").innerHTML = "$" + fx(F.fed_aug08, 0) + " billion &rarr; $" + fx(F.fed_dec08 / 1000, 1) + " trillion in four months";
+    $("msKey2Sub").innerHTML = "The Fed&rsquo;s balance sheet, Aug to Dec 2008 (+" + fx(F.fed_aug_dec_pct, 0) + "%). That jump was mostly emergency lending, not QE: loans and currency swaps rose $" +
+      fx(F.fac_aug_dec_bn / 1000, 2) + " trillion while bonds held rose only $" + fx(F.sec_aug_dec_bn, 0) + " billion. It reached $" + fx(F.fed_jan15 / 1000, 1) + " trillion by Jan 2015.";
+    $("msKey3").textContent = "+" + fx(F.m2_feb21_yoy, 1) + "%";
+    $("msKey3Sub").innerHTML = "M2&rsquo;s growth in the 12 months to February 2021, the fastest since the series began in 1960, versus a 2009&ndash;14 average of about " + fx(F.m2_0914_avg_yoy, 1) + "% a year.";
+    $("msKey4").textContent = fx(F.infl_jun22, 1) + "%";
+    const pj = (((D.money || {}).per_taxpayer || {}).projection || {}).series || {};
+    if (pj.Debt) {
+      $("msKey5").textContent = "$" + fx(pj.Debt.implied_increase_bn / 1000, 1) + " trillion";
+      $("msKey5Sub").innerHTML = "Federal debt added at the 2007-to-2009 pace on today&rsquo;s base (&asymp; " + usd(pj.Debt.per_taxpayer) + " per taxpayer).";
+      $("msSrc5").innerHTML = "Source: Federal Reserve Board (WALCL, M2SL) and U.S. Treasury (GFDEBTN; Debt to the Penny) via FRED and Fiscal Data; IRS Statistics of Income (returns filed). Today&rsquo;s levels: debt " +
+        dayName(pj.Debt.today_as_of) + "; Fed balance sheet " + pj.FedBalanceSheet.today_as_of + " (monthly average); M2 " + pj.M2.today_as_of + ". Per-taxpayer figures are our arithmetic. Historical arithmetic, not a forecast. Not financial advice.";
+    }
+    renderStoryPrograms(S);
+    renderStoryWindows(S);
+    renderStoryFlow(F);
+    // tabs + prev/next
+    const tabs = [...document.querySelectorAll("#ms .ms-tabs [role=tab]")];
+    tabs.forEach((b) => {
+      b.onclick = () => showStep(+b.dataset.step, false);
+      b.onkeydown = (e) => {
+        const k = e.key, n = +b.dataset.step;
+        const to = k === "ArrowRight" ? n % MS_N + 1 : k === "ArrowLeft" ? (n + MS_N - 2) % MS_N + 1 : k === "Home" ? 1 : k === "End" ? MS_N : 0;
+        if (to) { e.preventDefault(); showStep(to, false); $("msTab" + to).focus(); }
+      };
+    });
+    $("msPrev").onclick = () => showStep(msStep - 1, true);
+    $("msNext").onclick = () => showStep(msStep + 1, true);
+    document.querySelectorAll("#ms1Mode button").forEach((b) => b.onclick = () => {
+      document.querySelectorAll("#ms1Mode button").forEach((x) => x.classList.toggle("active", x === b)); drawStory1(b.dataset.mode);
+    });
+    const m = /^#story-([1-5])$/.exec(location.hash);
+    showStep(m ? +m[1] : 1, false, true);
+    if (m) setTimeout(() => $("story").scrollIntoView({ block: "start" }), 0);
+  }
+  function showStep(n, fromNav, initial) {
+    n = Math.max(1, Math.min(MS_N, n)); msStep = n;
+    for (let i = 1; i <= MS_N; i++) {
+      const on = i === n, tab = $("msTab" + i);
+      $("msStep" + i).hidden = !on;
+      tab.setAttribute("aria-selected", on); tab.tabIndex = on ? 0 : -1; tab.classList.toggle("active", on); tab.classList.toggle("done", i < n);
+    }
+    $("msBar").style.width = (n / MS_N * 100) + "%";
+    $("msCount").textContent = "Step " + n + " of " + MS_N;
+    $("msPrev").disabled = n === 1;
+    $("msNext").disabled = n === MS_N;
+    $("msNext").innerHTML = n < MS_N ? "Next: " + MS_TITLES[n] + " &rarr;" : "Next &rarr;";
+    $("msPrev").innerHTML = n > 1 ? "&larr; " + (window.innerWidth < 560 ? "Back" : MS_TITLES[n - 2]) : "&larr; Previous";
+    if (!initial && history.replaceState) history.replaceState(null, "", "#story-" + n);
+    drawStoryChart(n);
+    if (fromNav) {
+      const top = $("ms").getBoundingClientRect().top;
+      if (top < 0 || top > window.innerHeight * 0.6) $("ms").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  function drawStoryChart(n) {
+    if (!HAS_CHART) return;
+    if (msDone[n]) { const c = charts["ms" + n]; if (c) c.resize(); return; }
+    msDone[n] = true;
+    requestAnimationFrame(() => [null, () => drawStory1("rank"), drawStory2, drawStory3, drawStory4, drawStory5][n]());
+  }
+  const msNarrow = () => window.innerWidth < 560;
+  const tYear = (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return MONTHS[Math.min(11, Math.round((t - y) * 12))] + " " + y; };
+  function drawStory1(mode) {
+    if (!HAS_CHART) return;
+    if (charts.ms1) charts.ms1.destroy();
+    if (mode === "gaps") {
+      const r = analogRow(2007), gaps = (r && r.gaps) || {};
+      const featLabel = (f) => (FEAT[f] ? FEAT[f].label : f).replace(/ \(.*\)/, "").replace(", yearly change", " (yoy)").replace(/_/g, " ");
+      const keys = Object.keys(gaps).filter((f) => isNum(gaps[f]) && f !== "recession_share").sort((a, b) => Math.abs(gaps[a]) - Math.abs(gaps[b]));
+      const data = keys.map((f) => gaps[f]);
+      $("msChart1Title").innerHTML = "2007 vs 2026, indicator by indicator <span class='muted'>(gap in standard deviations)</span>";
+      $("msChart1Note").textContent = "Bars near zero rhyme; long bars don't. Negative = 2007 was lower than 2026 (for example, stock valuations and gold's yearly change).";
+      charts.ms1 = new Chart($("msChart1"), {
+        type: "bar", data: { labels: keys.map(featLabel), datasets: [{ data, backgroundColor: data.map((v) => Math.abs(v) < 0.5 ? SAGE : Math.abs(v) < 1 ? SAND : ROSE), borderRadius: 4, borderSkipped: false, barPercentage: 0.75 }] },
+        options: { indexAxis: "y", scales: { x: { suggestedMin: -2, suggestedMax: 2, grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.05)" } }, y: { grid: { display: false }, ticks: { autoSkip: false, font: { size: msNarrow() ? 10 : 12 } } } },
+          plugins: { tooltip: { callbacks: { label: (it) => " " + signed(it.parsed.x, 2) + " standard deviations" } } } },
+      });
+      return;
+    }
+    const rows = D.analogs.rows.filter((r) => isNum(r.similarity_score)).slice(0, 10);
+    $("msChart1Title").innerHTML = "Closest years to 2026 <span class='muted'>(similarity, 0&ndash;100)</span>";
+    $("msChart1Note").textContent = "Sand = 2007. Grey = recent years, shown as a sanity check only.";
+    charts.ms1 = new Chart($("msChart1"), {
+      type: "bar",
+      data: { labels: rows.map((r) => String(r.year)), datasets: [{ data: rows.map((r) => r.similarity_score), borderRadius: 6, borderSkipped: false, barPercentage: 0.8,
+        backgroundColor: rows.map((r) => r.year === 2007 ? SAND : r.recent ? "rgba(168,160,151,0.35)" : "rgba(143,188,152,0.6)") }] },
+      options: { indexAxis: "y", scales: { x: { min: 0, max: 100, grid: { color: "rgba(255,255,255,0.05)" } }, y: { grid: { display: false }, ticks: { autoSkip: false, font: { weight: 600 } } } },
+        plugins: { tooltip: { callbacks: { label: (it) => " Similarity " + fx(rows[it.dataIndex].similarity_score, 1) + (rows[it.dataIndex].recent ? " (recent year, sanity check)" : "") } } } },
+    });
+  }
+  function drawStory2() {
+    const L = D.money.levels || {}, dates = D.series.dates, S = D.story, a = 2006, b = 2016 + 11 / 12;
+    const pts = (arr, k) => (arr || []).map((v, i) => { const t = tOf(dates[i]); return isNum(v) && t >= a && t <= b ? { x: t, y: v / k } : null; }).filter(Boolean);
+    const ds = [
+      { label: "Fed balance sheet", data: pts(L.FedBalanceSheet, 1000), borderColor: TEAL, backgroundColor: TEAL, borderWidth: 3, pointRadius: 0, tension: 0.15, yAxisID: "y" },
+      { label: "M2 money supply", data: pts(L.M2, 1000), borderColor: SAGE, backgroundColor: SAGE, borderWidth: 2, pointRadius: 0, tension: 0.15, yAxisID: "y" },
+      { label: "Federal debt", data: pts(L.FedDebt, 1000), borderColor: ROSE, backgroundColor: ROSE, borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true, yAxisID: "y" },
+      { label: "Fed funds rate (right)", data: pts(series("FedFunds"), 1), borderColor: WGRAY, backgroundColor: WGRAY, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0, yAxisID: "y2" },
+    ];
+    const n = msNarrow();
+    charts.ms2 = new Chart($("msChart2"), {
+      type: "line", data: { datasets: ds },
+      options: { parsing: false, normalized: true, interaction: { mode: "index", intersect: false },
+        scales: { x: { type: "linear", min: a, max: 2017, grid: { display: false }, ticks: { stepSize: n ? 2 : 1, callback: (v) => Number.isInteger(v) ? (n ? "’" + String(v).slice(2) : v) : "" } },
+          y: { min: 0, grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => "$" + v + "T" } },
+          y2: { position: "right", min: 0, max: 6, grid: { display: false }, ticks: { callback: (v) => v + "%" } } },
+        plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: n ? 8 : 12, boxHeight: 3, padding: n ? 6 : 10, font: { size: n ? 10 : 12 } } },
+          bands: { bands: recBands, highlights: [{ from: 2008 + 8 / 12, to: 2009, color: "rgba(216,195,147,0.07)" }], markers: (S.qe_markers || []).map((m) => ({ t: m.t, label: m.label })) },
+          tooltip: { callbacks: { title: tYear, label: (it) => " " + it.dataset.label.replace(" (right)", "") + ": " + (it.dataset.yAxisID === "y2" ? fx(it.parsed.y, 2) + "%" : "$" + fx(it.parsed.y, 2) + "T") } } } },
+    });
+    $("msChart2Note").innerHTML = "Dashed sand lines = QE start dates: " + (S.qe_markers || []).map((m) => m.label + " " + m.date).join(", ") + " (Fed press releases). The faint sand band marks Sep&ndash;Dec 2008, when the jump came mostly from emergency loans and currency swaps, before QE1. Rose band = recession.";
+  }
+  function drawStory3() {
+    const rows = D.story.reserves_m2 || [], n = msNarrow();
+    charts.ms3 = new Chart($("msChart3"), {
+      data: { labels: rows.map((r) => r.partial ? r.y + " YTD" : String(r.y)),
+        datasets: [
+          { type: "line", label: "M2: money people hold", data: rows.map((r) => r.m2_bn / 1000), borderColor: SAGE, backgroundColor: SAGE, borderWidth: 2.5, pointRadius: 0, tension: 0.2, order: 0 },
+          { type: "bar", label: "Bank reserves at the Fed", data: rows.map((r) => r.reserves_bn / 1000), backgroundColor: "rgba(111,167,173,0.75)", borderRadius: 3, order: 1 },
+        ] },
+      options: { interaction: { mode: "index", intersect: false },
+        scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: n ? 6 : 12, callback: (v, i) => String(rows[i].y) } },
+          y: { min: 0, grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => "$" + v + "T" } } },
+        plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 6, font: { size: n ? 10 : 12 } } },
+          tooltip: { callbacks: { label: (it) => " " + it.dataset.label + ": " + (it.parsed.y < 1 ? "$" + fx(it.parsed.y * 1000, 0) + "B" : "$" + fx(it.parsed.y, 2) + "T") } } } },
+    });
+  }
+  function drawStory4() {
+    const dates = D.series.dates, a = 2000, n = msNarrow();
+    const mk = (key, label, color, w) => ({ label, borderColor: color, backgroundColor: color, borderWidth: w || 1.75, pointRadius: 0, tension: 0.2,
+      data: (series(key) || []).map((v, i) => isNum(v) && tOf(dates[i]) >= a ? { x: tOf(dates[i]), y: v } : null).filter(Boolean) });
+    const ds = [mk("M2_YoY", "M2 money supply", SAGE, 2.5), mk("Gold_YoY", "Gold", SAND), mk("HomePrice_YoY", "Home prices", SLATE), mk("Inflation_12m", "Inflation (CPI)", ROSE)].filter((d) => d.data.length);
+    charts.ms4 = new Chart($("msChart4"), {
+      type: "line", data: { datasets: ds },
+      options: { parsing: false, normalized: true, interaction: { mode: "index", intersect: false },
+        scales: { x: { type: "linear", min: a, max: TARGET + 1, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? (n ? "’" + String(v).slice(2) : v) : "", maxTicksLimit: n ? 7 : 14 } },
+          y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: axisPct } } },
+        plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: n ? 8 : 12, boxHeight: 3, padding: n ? 6 : 10, font: { size: n ? 10 : 12 } } },
+          bands: { highlights: [{ from: 2008 + 11 / 12, to: 2013 + 11 / 12, color: "rgba(143,188,152,0.08)", label: n ? "" : "After 2008", text: "rgba(231,233,230,0.6)" },
+            { from: 2019 + 11 / 12, to: 2021 + 11 / 12, color: "rgba(143,188,152,0.08)", label: n ? "" : "After 2020", text: "rgba(231,233,230,0.6)" }] },
+          tooltip: { callbacks: { title: tYear, label: (it) => " " + it.dataset.label + ": " + signed(it.parsed.y, 1, "%") } } } },
+    });
+  }
+  function drawStory5() {
+    const pj = (((D.money || {}).per_taxpayer || {}).projection || {}).series || {};
+    const P = (D.money.per_taxpayer || {}).years || [], tax = P.find((r) => r.label === "2025");
+    const rows = [["Federal debt", pj.Debt, ROSE], ["Fed balance sheet", pj.FedBalanceSheet, TEAL], ["M2 money supply", pj.M2, SAGE]].filter((r) => r[1]);
+    const labels = rows.map((r) => r[0]), data = rows.map((r) => r[1].per_taxpayer), colors = rows.map((r) => r[2]);
+    if (tax && isNum(tax.income_tax_per_taxpayer)) { labels.push("Avg. income tax paid, FY2025"); data.push(tax.income_tax_per_taxpayer); colors.push("rgba(168,160,151,0.55)"); }
+    charts.ms5 = new Chart($("msChart5"), {
+      type: "bar", data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, borderSkipped: false, barPercentage: 0.75 }] },
+      options: { indexAxis: "y", scales: { x: { min: 0, grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => "$" + fx(v / 1000, 0) + "k" } }, y: { grid: { display: false }, ticks: { autoSkip: false, font: { size: msNarrow() ? 10 : 12 } } } },
+        plugins: { tooltip: { callbacks: { label: (it) => { const r = rows[it.dataIndex]; return r ? " +" + usd(it.parsed.x) + " per taxpayer (+" + msT(r[1].implied_increase_bn) + " total, " + signed(r[1].growth_pct, 1, "%") + ")" : " " + usd(it.parsed.x) + " per taxpayer (FY2025 individual income tax ÷ returns filed)"; } } } } },
+    });
+    $("msChart5Note").innerHTML = "Same growth as Dec 2007 &rarr; Dec 2009, applied to today&rsquo;s levels. Grey bar for scale: average federal income tax per taxpayer. Taxpayer = one individual income-tax return filed; a joint return counts once.";
+  }
+  function renderStoryPrograms(S) {
+    let h = "<thead><tr><th>Program</th><th>When</th><th>Size</th><th>Per taxpayer</th><th>Source</th></tr></thead><tbody>", grp = "";
+    (S.programs || []).forEach((p) => {
+      if (p.group !== grp) { grp = p.group; h += "<tr class='ms-grp'><th colspan='5'>" + grp + "</th></tr>"; }
+      h += "<tr><td data-k='Program'><b>" + p.name + "</b><span class='ms-kind'>" + p.kind + "</span></td><td data-k='When'>" + p.when + "</td><td data-k='Size'>" + p.size + "</td>" +
+        "<td data-k='Per taxpayer'>" + p.ptx + (p.ptx_sub ? "<span class='ms-kind'>" + p.ptx_sub + "</span>" : "") + "</td>" +
+        "<td data-k='Source'>" + p.src.map((s) => "<a href='" + s.url + "' target='_blank' rel='noopener'>" + s.label + "</a>").join("<br>") + "</td></tr>";
+    });
+    $("msPrograms").innerHTML = h + "</tbody>";
+    $("msProgramsNote").textContent = S.program_note || "";
+  }
+  function renderStoryWindows(S) {
+    const c = (v) => "<td class='" + cls(v) + "'>" + signed(v, 1, "%") + "</td>";
+    $("msWindows").innerHTML = "<thead><tr><th>Change over&hellip;</th><th>Gold</th><th>S&amp;P 500 (price)</th><th>Home prices (Case-Shiller)</th><th>Consumer prices (CPI)</th></tr></thead><tbody>" +
+      (S.windows_table || []).map((w) => "<tr><th scope='row'>" + w.label + " <span class='muted'>(" + w.span + ")</span></th>" + c(w.gold) + c(w.sp500) + c(w.homes) + c(w.cpi) + "</tr>").join("") + "</tbody>";
+  }
+  function renderStoryFlow(F) {
+    const box = (t, sub, k) => "<div class='mf-box" + (k ? " " + k : "") + "'><b>" + t + "</b>" + (sub ? "<small>" + sub + "</small>" : "") + "</div>";
+    const arrow = (t, k) => "<div class='mf-arrow" + (k ? " " + k : "") + "' aria-hidden='true'><span>" + t + "</span></div>";
+    $("msFlow").innerHTML =
+      "<div class='mf-row'>" + box("U.S. Treasury", "spends more than it collects") + arrow("sells bonds") + box("Banks &amp; investors", "buy the bonds") +
+      arrow("sell bonds to the Fed (QE)") + box("Federal Reserve", "pays with brand-new reserves", "mf-fed") + "</div>" +
+      "<div class='mf-split'>" +
+        "<div class='mf-lane'><p class='mf-when'>2008&ndash;14</p>" + box("Bank reserves at the Fed", "~$" + fx(F.reserves_2007_bn, 0) + " billion (2007 avg) &rarr; $" + fx(F.reserves_2014_bn / 1000, 1) + " trillion (2014 avg)", "mf-res") +
+          arrow("only a trickle reached deposits", "mf-down mf-thin") + box("People&rsquo;s bank accounts (M2)", "+" + fx(F.m2_0714_pct, 0) + "% over seven years, about " + fx(F.m2_0714_ann, 1) + "% a year") +
+          "<p class='mf-cap'>Reserves mostly sat in the banks.</p></div>" +
+        "<div class='mf-lane'><p class='mf-when'>2020&ndash;21</p>" + box("Treasury spending", "checks $" + fx(F.checks_bn, 0) + " billion &middot; PPP $" + fx(F.ppp_approved_bn, 0) + " billion approved, over $" + fx(F.ppp_forgiven_bn, 0) + " billion forgiven") +
+          arrow("landed in bank deposits", "mf-down mf-wide") + box("People&rsquo;s bank accounts (M2)", "+" + fx(F.m2_feb21_yoy, 1) + "% in the 12 months to Feb 2021", "mf-m2") +
+          "<p class='mf-cap'>Checks and PPP mainly drove M2 up (people saving more and firms drawing credit lines added to it).</p></div>" +
+      "</div><p class='mf-caption'>2008: the money filled the banks&rsquo; tank. 2020: the money reached people&rsquo;s wallets.</p>";
+  }
+
   // ------------------------------------------------------------ METHOD / FOOTER
   function renderMeta() {
     const latest = D.series.latest_by_series || {};
@@ -1884,6 +2090,7 @@
     renderEras();
     renderWars();
     initCompare();
+    renderStory();
     renderPress();
     renderExpansion();
     renderPerTaxpayer();
