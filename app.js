@@ -141,7 +141,7 @@
           const [p0, p1] = draw(e.from, e.to, e.color);
           if (e.short && p1 - p0 > 56) {
             ctx.fillStyle = "rgba(231,233,230,0.55)"; ctx.font = "600 10px " + Chart.defaults.font.family; ctx.textAlign = "left";
-            ctx.fillText(e.short, p0 + 5, ca.bottom - 6);
+            if (ctx.measureText(e.short).width + 10 <= p1 - p0) ctx.fillText(e.short, p0 + 5, ca.bottom - 6);
           }
         });
         (opts.bands || []).forEach(([a, b]) => draw(a, b, REC_FILL));
@@ -1280,33 +1280,52 @@
       });
     }
 
-    // Gold
+    // Gold (IMF IFS via DBnomics)
     const G = X.gold || {};
+    const dash = (s) => String(s || "").replace(/(\d{4})-(\d{2})(\d{2})$/, "$1–$3").replace(/(\d{4})-(\d{4})/, (m, a1, b1) => a1 + "–" + b1.slice(2));
+    const W = G.world || [];
+    const lastFull = W.filter((r) => !r.partial).slice(-1)[0] || {};
+    const part = W.find((r) => r.partial);
+    const pol = G.poland || {};
     $("xGoldGrid").innerHTML =
       "<div class='xg'><div class='lbl'>U.S. gold on the books</div><div class='v'>" + usdT(G.book_usd) + "</div><div class='sub'>" +
-        Number(G.oz).toLocaleString("en-US", { maximumFractionDigits: 0 }) + " oz × statutory $" + fx(G.statutory_price, 2) + "</div></div>" +
+        (G.oz / 1e6).toFixed(1) + "M oz (" + Number(G.oz).toLocaleString("en-US", { maximumFractionDigits: 0 }) + ") × statutory $" + fx(G.statutory_price, 2) + "/oz</div></div>" +
       "<div class='xg'><div class='lbl'>Same gold at market</div><div class='v'>" + usdT(G.market_usd) + "</div><div class='sub'>at $" + Number(G.market_price).toLocaleString("en-US") + "/oz (" + (G.as_of || "") + ")</div></div>" +
-      "<div class='xg'><div class='lbl'>Official-sector flip</div><div class='v'>" +
-        (G.windows && G.windows.gfc_sell ? (signed(G.windows.gfc_sell.sum13, 0, " t/yr") + " → " + signed(G.windows.post_2010_buy.sum13, 0, " t/yr")) : "–") +
-      "</div><div class='sub'>1999–2009 avg → 2010–2021 avg (13-country proxy). Poland: " +
-        fx((G.poland_from || {}).moz, 1) + "M oz (" + ((G.poland_from || {}).y || "") + ") → " + fx((G.poland_to || {}).moz, 1) + "M oz (" + ((G.poland_to || {}).y || "") + ").</div></div>";
-    const s25 = (G.windows || {}).surge_2022_25;
-    $("xGoldProxy").innerHTML = "<strong>" + (G.proxy_label || "") + "</strong>" + (s25 ? (" Honest caveat: for " + s25.start + "–" + s25.end +
-      " the same proxy shows " + signed(s25.sum13, 0, " t/yr") + " across all 13 countries (the five biggest buyers alone: " + signed(s25.top5, 0, " t/yr") +
-      "). Higher gold prices and reserve revaluations make this reserve-based estimate unreliable for recent years, and it can't see unreported buying.") : "");
+      "<div class='xg'><div class='lbl'>Poland's gold (IMF)</div><div class='v'>" + fx(pol.from_moz, 1) + "M → " + fx(pol.to_moz, 1) + "M oz</div><div class='sub'>" +
+        pol.from_y + " → " + pol.to_y + (pol.to_partial ? " (Jun)" : "") + (pol.y2024_moz ? "; end-2024: " + fx(pol.y2024_moz, 1) + "M oz" : "") + "</div></div>";
+    $("xGoldRange").textContent = W.length ? "(" + W[0].y + "–" + W[W.length - 1].y + (part ? "; " + part.y + " = Jan–Jun only" : "") + ")" : "";
+    const eraCards = (G.eras || []).map((e) =>
+      "<div class='xe'><div class='lbl'>" + dash(e.label) + "</div><div class='v " + (e.avg_t_yr < 0 ? "neg" : "pos") + "'>" + signed(e.avg_t_yr, 0, " t/yr") + "</div><div class='sub'>" +
+      signed(e.cum_t, 0, " t total") + "</div></div>");
+    if (part) eraCards.push("<div class='xe'><div class='lbl'>" + part.y + " (Jan–Jun)</div><div class='v " + (part.net_t < 0 ? "neg" : "pos") + "'>" + signed(part.net_t, 0, " t") +
+      "</div><div class='sub'>partial year</div></div>");
+    $("xGoldEras").innerHTML = eraCards.join("");
+    $("xGoldTopWin").textContent = dash(G.top_window || "2022-2024");
+    $("xGoldTop").innerHTML = (G.top_buyers || []).map((t) => "<li>" + t.name + " <b>" + signed(t.cum_t, 0, " t") + "</b>" + (t.code === "RU" ? "<span class='muted'>*</span>" : "") + "</li>").join("");
+    $("xGoldTopNote").textContent = "Cumulative net change in reported holdings, " + dash(G.top_window || "") + ". * " + (G.russia_note || "");
+    const w22 = G.why_2022 || {};
+    const lst = (arr) => (arr || []).map((b) => b.name + " " + signed(b.t, 0, " t")).join(", ");
+    $("xGoldWhy").innerHTML = "Many central banks did buy in 2022: " + lst(w22.buyers) + ". But reported selling elsewhere offset it — " +
+      (w22.sellers && w22.sellers.length ? lst(w22.sellers) + " and " : "") + "other reporting central banks outside our tracked list, net about " + signed(w22.others_t, 0, " t") +
+      ". Our tracked countries added " + signed(w22.tracked_sum_t, 0, " t") + " in total, so the IMF world figure came out at " + signed(w22.world_t, 0, " t") +
+      ". Most of the record buying the World Gold Council estimates for 2022 was never reported to the IMF, so it doesn't show here. 2023 (" +
+      signed((W.find((r) => r.y === 2023) || {}).net_t, 0, " t") + ") is when reported buying caught up.";
+    $("xGoldWgc").innerHTML = (G.wgc_note || "") + (G.wgc_url ? " <a href='" + G.wgc_url + "' target='_blank' rel='noopener'>World Gold Council ↗</a>" : "");
     $("xGoldSrc").textContent = G.source || "";
-    $("xGoldWgc").innerHTML = (G.wgc_note || "") + (G.wgc_url ? " <a href='" + G.wgc_url + "' target='_blank' rel='noopener'>Open World Gold Council ↗</a>" : "");
-    if (HAS_CHART && (G.poland || []).length) {
-      // Chart 13-country net tonnes windows as bars + Poland holdings line from official_gold via poland array only;
-      // Better: show Poland holdings; for sum13 use windows as callout already.
+    $("xGoldCite").textContent = G.citation || "";
+    if (HAS_CHART && W.length) {
       if (charts.xGold) charts.xGold.destroy();
-      const wins = ["gfc_sell", "post_2010_buy", "surge_2022_25"].map((k) => G.windows[k]).filter(Boolean);
       charts.xGold = new Chart($("xGoldChart"), {
         type: "bar",
-        data: { labels: wins.map((w) => w.start + "–" + w.end), datasets: [{ label: "Avg net tonnes / year (13-country proxy)",
-          data: wins.map((w) => w.sum13), backgroundColor: wins.map((w) => w.sum13 < 0 ? "rgba(217,168,168,0.8)" : "rgba(143,188,152,0.8)"), borderRadius: 8, barPercentage: 0.55 }] },
-        options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + signed(c.parsed.y, 0, " t/yr") } } },
-          scales: { y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => v + " t" } }, x: { grid: { display: false } } } },
+        data: { datasets: [{ label: "World net purchases (t)", data: W.map((r) => ({ x: r.y + 0.5, y: r.net_t, partial: r.partial })),
+          backgroundColor: W.map((r) => r.partial ? "rgba(169,203,177,0.35)" : r.net_t < 0 ? "rgba(217,168,168,0.85)" : "rgba(143,188,152,0.85)"),
+          borderColor: W.map((r) => r.partial ? "rgba(169,203,177,0.9)" : "transparent"), borderWidth: W.map((r) => r.partial ? 1.5 : 0),
+          borderDash: [3, 3], barPercentage: 1, categoryPercentage: 0.9 }] },
+        options: { parsing: false,
+          plugins: { legend: { display: false }, bands: { eras: eraBands(), markers: nixonMarker() },
+            tooltip: { callbacks: { title: (it) => Math.floor(it[0].parsed.x) + (it[0].raw.partial ? " (Jan–Jun only)" : ""), label: (c) => " " + signed(c.parsed.y, 0, " t") } } },
+          scales: { x: { type: "linear", min: W[0].y, max: W[W.length - 1].y + 1, offset: false, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) && v % 10 === 0 ? v : "", maxTicksLimit: 12 } },
+            y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => v + " t" } } } },
       });
     }
 

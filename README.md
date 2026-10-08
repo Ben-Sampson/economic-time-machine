@@ -45,8 +45,9 @@ No raw data files or data downloads are included.
 - **Printing-press cards & Expansion #2/#3 (public domain / CC BY, cited)**: BLS CPI-U NSA and
   purchasing power (dollar since 1913); OMB Historical Tables 2.1 & 3.1 with IRS returns (interest vs
   defense, outlays per taxpayer); Treasury/Fed debt holders; Fed H.4.1 plumbing (reserves, ON RRP,
-  discount window, BTFP); Treasury Fiscal Data gold reserve; World Bank WDI reserves + Pink Sheet
-  (13-country official-gold estimate, excludes unreported buying); CMS National Health Expenditure
+  discount window, BTFP); Treasury Fiscal Data gold reserve; International Monetary Fund,
+  International Financial Statistics official reserve gold (accessed via DBnomics; tonnes and net
+  flows are our calculation; reported holdings only); CMS National Health Expenditure
   Accounts; AHRQ MEPS-IC; DOL Women's Bureau National Database of Childcare Prices; BLS
   health-insurance (method break ~late 2022) and daycare CPI; Fed Distributional Financial Accounts.
 - **Link-only, no charts of their data**: KFF Employer Health Benefits Survey (CC BY-NC-ND);
