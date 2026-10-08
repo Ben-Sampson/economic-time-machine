@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Build log · The Economic Time Machine</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316191c'/%3E%3Ccircle cx='32' cy='32' r='20' stroke='%238fbc98' stroke-width='5' fill='none'/%3E%3Cpath d='M32 20 V32 L41 37' stroke='%23e7e9e6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#16191c">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .log{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+    .log h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;margin:8px 0 12px}
+    .log h2{font-size:1.3rem;margin:32px 0 10px;padding-top:16px;border-top:1px solid var(--line)}
+    .log p,.log li{color:var(--muted)}
+    .log li{margin:0 0 10px;line-height:1.55}
+    .log strong{color:var(--text)}
+    .log code{color:#c5dccb}
+    .log pre{white-space:pre-wrap;color:var(--muted)}
+    .back{display:inline-block;margin-bottom:12px;font-weight:600}
+  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@18.1.0/lib/marked.umd.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" class="b-ring"/><path d="M32 18 V32 L42 38" class="b-hand"/><path d="M8 20 A28 28 0 0 1 20 7" class="b-arrow"/><path d="M6 12 L8 21 L16 18" class="b-arrow"/></svg><span>The Economic Time Machine</span></a>
+    </div>
+  </header>
+  <main class="log">
+    <a class="back" href="index.html#method">&larr; Back to the dashboard</a>
+    <p class="eyebrow">How the agents built it · public edition</p>
+    <div id="log"><p class="muted">Loading the build log&hellip;</p></div>
+    <p class="notice"><span class="notice-dot" aria-hidden="true"></span>Educational project, not financial advice.</p>
+  </main>
+  <script>
+    (function () {
+      function render(md) {
+        var box = document.getElementById("log");
+        if (!md) { box.innerHTML = "<p class='muted'>Build log not found. Run build_data.py to generate the public build log.</p>"; return; }
+        if (window.marked && marked.parse) {
+          box.innerHTML = marked.parse(md);
+          box.querySelectorAll("a[href^='http']").forEach(function (a) { a.target = "_blank"; a.rel = "noopener"; });
+        } else {
+          var pre = document.createElement("pre"); pre.textContent = md; box.innerHTML = ""; box.appendChild(pre);
+        }
+      }
+      function fromBundle() {
+        var s = document.createElement("script"); s.src = "data/bundle.js";
+        s.onload = function () { render(window.MACRO_DATA && window.MACRO_DATA.buildLog); };
+        s.onerror = function () { render(""); };
+        document.head.appendChild(s);
+      }
+      window.addEventListener("DOMContentLoaded", function () {
+        if (location.protocol === "file:") return fromBundle();
+        fetch("data/build_log_public.md", { cache: "no-cache" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(render).catch(fromBundle);
+      });
+    })();
+  </script>
+</body>
+</html>

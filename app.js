@@ -1,0 +1,1121 @@
+/* 2026 Macro Analogs: dashboard logic. Plain JS, no build step.
+   Data: data/*.json written by build_data.py (falls back to data/bundle.js on file://). */
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------ config
+  // Palette: slate background, sage primary; muted multi-series tones
+  const SAGE = "#8fbc98", TEAL = "#6fa7ad", WGRAY = "#a8a097", SAND = "#d8c393", ROSE = "#cc8f8f", SLATE = "#9aa8bd", MAUVE = "#b49fb8";
+  const C26 = SAGE, CY = SAND, CY2 = TEAL, GOLD = SAND, GREEN = SAGE, PINK = ROSE, GREY = "#a4aba6";
+  const REC_FILL = "rgba(204,143,143,0.10)";
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const TARGET = 2026;
+
+  // Indicators shown in the time machine / history / snapshot
+  const IND = {
+    Inflation_12m: { label: "Inflation", long: "Inflation (CPI, 12-month)", unit: "%", dec: 1, chg: "pp", src: "BLS via FRED (CPIAUCSL)", explain: "How fast consumer prices rose over the past year." },
+    Unemployment: { label: "Unemployment", long: "Unemployment rate", unit: "%", dec: 1, chg: "pp", src: "BLS via FRED (UNRATE)", explain: "Share of the labor force looking for work." },
+    FedFunds: { label: "Fed funds rate", long: "Fed funds rate", unit: "%", dec: 2, chg: "pp", src: "Federal Reserve Board via FRED (FEDFUNDS)", explain: "The Fed's main short-term interest rate." },
+    Yield_10Y: { label: "10-year yield", long: "10-year Treasury yield", unit: "%", dec: 2, chg: "pp", src: "Federal Reserve Board via FRED (GS10)", explain: "Long-term U.S. borrowing cost; it drives mortgage rates." },
+    YieldCurve_10Y2Y: { label: "Yield curve", long: "Yield curve (10Y minus 2Y)", unit: " pts", dec: 2, chg: "pp", src: "St. Louis Fed via FRED (T10Y2Y), monthly average", explain: "Below zero (\"inverted\") has often come before recessions.", zero: true },
+    SP_Real_YoY: { label: "Real S&P 500 (yearly change)", long: "Real S&P 500, % change vs a year earlier", unit: "%", dec: 0, chg: "pp", src: "Robert Shiller's data (inflation-adjusted S&P 500), 12-month % change only", explain: "How much stocks rose or fell over 12 months after inflation (price only).", zero: true, signed: true },
+    CAPE_Annual: { label: "Stock valuation (CAPE)", long: "Stock valuation: Shiller CAPE, annual average", unit: "×", dec: 1, chg: "pct", src: "Robert Shiller's data, annual averages only", explain: "Stock prices vs 10 years of inflation-adjusted earnings. Higher = pricier. Shown as yearly averages.", annual: true },
+    Oil_YoY: { label: "Oil (yearly change)", long: "Oil price, % change vs a year earlier", unit: "%", dec: 0, chg: "pp", src: "WTI via FRED (WTISPLC), 12-month % change", explain: "How much crude oil rose or fell over 12 months.", zero: true, signed: true },
+    Gold: { label: "Gold", long: "Gold price ($ per ounce)", unit: "", prefix: "$", dec: 0, chg: "pct", src: "World Bank Pink Sheet (CC BY 4.0)", explain: "Price of an ounce of gold in U.S. dollars." },
+    DollarIndex: { label: "Dollar", long: "U.S. dollar (broad trade-weighted index)", unit: "", dec: 1, chg: "pct", src: "Federal Reserve Board via FRED (TWEXBGSMTH; TWEXBMTH spliced before 2006)", explain: "The dollar vs trading partners' currencies. Higher = stronger." },
+    HomePrice_YoY: { label: "Home prices (yearly change)", long: "Home prices, % change vs a year earlier", unit: "%", dec: 1, chg: "pp", src: "S&P CoreLogic Case-Shiller U.S. National via FRED (CSUSHPISA), % change only", explain: "How much U.S. home prices rose or fell over 12 months.", zero: true, signed: true },
+    M2_YoY: { label: "Money supply growth (M2)", long: "M2 money supply, % change vs a year earlier", unit: "%", dec: 1, chg: "pp", src: "Federal Reserve Board via FRED (M2SL), 12-month % change", explain: "How fast the money supply grew over 12 months.", zero: true, signed: true },
+  };
+  const COMPARE_KEYS = ["Inflation_12m", "Unemployment", "FedFunds", "Yield_10Y", "YieldCurve_10Y2Y", "SP_Real_YoY", "Oil_YoY", "Gold", "DollarIndex"];
+  const HISTORY_KEYS = COMPARE_KEYS.concat(["CAPE_Annual", "HomePrice_YoY", "M2_YoY"]);
+  const SNAP_KEYS = ["Inflation_12m", "Unemployment", "FedFunds", "Yield_10Y", "YieldCurve_10Y2Y", "CAPE", "WTI_Oil", "Gold", "DollarIndex"];
+
+  // Scoring features (annual.json) in plain English
+  const FEAT = {
+    inflation_12m: { name: "inflation", label: "Inflation", unit: "%", dec: 1, step: 0.1 },
+    unemployment: { name: "unemployment", label: "Unemployment", unit: "%", dec: 1, step: 0.1 },
+    fed_funds: { name: "the Fed funds rate", label: "Fed funds rate", unit: "%", dec: 2, step: 0.05 },
+    yield_10y: { name: "the 10-year yield", label: "10-year yield", unit: "%", dec: 2, step: 0.05 },
+    yield_curve: { name: "the yield curve", label: "Yield curve (10Y−2Y)", unit: " pts", dec: 2, step: 0.05 },
+    cape: { name: "stock valuations", label: "Stock valuation (CAPE, avg)", unit: "×", dec: 1, step: 0.5 },
+    real_sp_yoy: { name: "stock momentum", label: "Real S&P 500, yearly change", unit: "%", dec: 0, step: 1, signed: true },
+    oil_yoy: { name: "oil", label: "Oil, yearly change", unit: "%", dec: 0, step: 1, signed: true },
+    dollar_yoy: { name: "the dollar", label: "Dollar, yearly change", unit: "%", dec: 1, step: 0.5, signed: true },
+    gold_yoy: { name: "gold", label: "Gold, yearly change", unit: "%", dec: 0, step: 1, signed: true },
+    home_price_yoy: { name: "home prices", label: "Home prices, yearly change", unit: "%", dec: 1, step: 0.5, signed: true },
+    recession_share: { name: "recession status", label: "Months in recession", unit: "%", dec: 0, step: 0.05, pct: true },
+    m2_yoy: { name: "money-supply growth", label: "Money supply (M2), yearly change", unit: "%", dec: 1, step: 0.5, signed: true },
+  };
+  const MAIN_DIALS = ["inflation_12m", "unemployment", "fed_funds", "yield_10y", "yield_curve", "oil_yoy", "cape"];
+
+  // ------------------------------------------------------------ helpers
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const isNum = (v) => typeof v === "number" && isFinite(v);
+  const fx = (v, d) => isNum(v) ? v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "–";
+  const signed = (v, d, unit = "") => {
+    if (!isNum(v)) return "–";
+    if (d === 0 && v !== 0 && Math.abs(v) < 0.5) d = 1;   // avoid a misleading "+0%"
+    return (v > 0 ? "+" : v < 0 ? "−" : "±") + fx(Math.abs(v), d) + unit;
+  };
+  const cls = (v) => !isNum(v) ? "flat" : v > 0 ? "up" : v < 0 ? "down" : "flat";
+  const monthName = (ym) => ym ? MONTHS[+ym.slice(5, 7) - 1] + " " + ym.slice(0, 4) : "";
+  const tOf = (ym) => +ym.slice(0, 4) + (+ym.slice(5, 7) - 1) / 12;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  function fmtInd(key, v) {
+    const m = IND[key]; if (!m || !isNum(v)) return "–";
+    return m.signed ? signed(v, m.dec, m.unit) : (m.prefix || "") + fx(v, m.dec) + m.unit;
+  }
+  function whenVisible(node, fn) {
+    if (!("IntersectionObserver" in window)) return fn();
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); fn(); } }, { rootMargin: "300px" });
+    io.observe(node);
+  }
+  function loadScript(src) {
+    return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  }
+  async function loadData() {
+    const names = ["series", "annual", "what_next", "analogs", "money"];
+    try {
+      if (location.protocol === "file:") throw new Error("file");
+      const got = await Promise.all(names.map((n) => fetch("data/" + n + ".json", { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(n); return r.json(); })));
+      return { series: got[0], annual: got[1], whatNext: got[2], analogs: got[3], money: got[4] };
+    } catch (e) {
+      await loadScript("data/bundle.js");
+      return window.MACRO_DATA;
+    }
+  }
+
+  // ------------------------------------------------------------ Chart.js setup
+  const HAS_CHART = typeof window.Chart !== "undefined";
+  const charts = {};
+  if (HAS_CHART) {
+    Chart.defaults.color = GREY;
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.font.size = 12;
+    Chart.defaults.borderColor = "rgba(255,255,255,0.06)";
+    Chart.defaults.animation.duration = 350;
+    Chart.defaults.plugins.legend.display = false;
+    Chart.defaults.plugins.tooltip.backgroundColor = "rgba(17,20,22,0.96)";
+    Chart.defaults.plugins.tooltip.borderColor = "rgba(255,255,255,0.15)";
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.maintainAspectRatio = false;
+    // shading plugin: options.plugins.bands = { bands:[[x0,x1],...], color, highlights:[{from,to,color,label}] }
+    Chart.register({
+      id: "bands",
+      beforeDatasetsDraw(chart, _a, opts) {
+        const x = chart.scales.x; if (!x || !opts) return;
+        const { ctx, chartArea: ca } = chart;
+        ctx.save();
+        const draw = (a, b, color) => {
+          let p0 = x.getPixelForValue(a), p1 = x.getPixelForValue(b);
+          p0 = Math.max(p0, ca.left); p1 = Math.min(p1, ca.right);
+          if (p1 > p0) { ctx.fillStyle = color; ctx.fillRect(p0, ca.top, p1 - p0, ca.bottom - ca.top); }
+          return [p0, p1];
+        };
+        (opts.bands || []).forEach(([a, b]) => draw(a, b, REC_FILL));
+        (opts.highlights || []).forEach((h) => {
+          const [p0, p1] = draw(h.from, h.to, h.color);
+          if (h.label && p1 > p0) {
+            ctx.fillStyle = h.text || "#fff"; ctx.font = "600 11px " + Chart.defaults.font.family; ctx.textAlign = "center";
+            ctx.fillText(h.label, (p0 + p1) / 2, ca.top + 12);
+          }
+        });
+        ctx.restore();
+      },
+    });
+  }
+  function axisPct(v) { return v + "%"; }
+
+  // ------------------------------------------------------------ state
+  let D, idx = {}, recBands = [], histRows = [], selectedYear = null, nextH = 12;
+
+  function series(key) { return (D.series.series[key]) || (D.money && D.money.series[key]) || null; }
+  function val(key, ym) { const s = series(key); const i = idx[ym]; return s && i != null ? s[i] : null; }
+  function yearMonths(key, y) { return MONTHS.map((_, m) => val(key, y + "-" + String(m + 1).padStart(2, "0"))); }
+  const analogRow = (y) => D.analogs.rows.find((r) => r.year === y);
+  const nextRow = (y) => (D.whatNext.rows || {})[String(y)] || null;
+
+  // ------------------------------------------------------------ sentences
+  function closestFeatures(gaps, n = 2) {
+    return Object.entries(gaps || {})
+      .filter(([f, v]) => isNum(v) && f !== "recession_share" && FEAT[f])
+      .sort((a, b) => Math.abs(a[1]) - Math.abs(b[1])).slice(0, n).map(([f]) => f);
+  }
+  function lastTimeSentence(year, gaps, scenario) {
+    const w = nextRow(year) || {};
+    if (w.callout) return w.callout;
+    const f = closestFeatures(gaps).map((k) => FEAT[k].name);
+    const who = f.length === 2 ? f[0] + " and " + f[1] : f[0] || "the economy";
+    const verb = f.length === 2 ? "looked like" : "looked like";
+    let s = "Last time " + who + " " + verb + (scenario ? " your 2026" : " they do now") + " <strong>(" + year + ")</strong>, ";
+    if (isNum(w.sp_real_12m)) {
+      s += "the S&amp;P 500 (real) did <strong class='" + cls(w.sp_real_12m) + "'>" + signed(w.sp_real_12m, 0, "%") + "</strong> over the next 12 months";
+      s += isNum(w.sp_real_24m) ? " and <strong class='" + cls(w.sp_real_24m) + "'>" + signed(w.sp_real_24m, 0, "%") + "</strong> over 24." : ". The 24-month result isn't in yet.";
+    } else s += "but what came next hasn't happened yet.";
+    return cap(s);
+  }
+  function recessionBadge(w, h = 24) {
+    const v = h === 12 ? w && w.recession_12m : w && w.recession_24m;
+    if (v === true) return "<span class='badge badge-yes'>Recession within " + h + " months</span>";
+    if (v === false) return "<span class='badge badge-no'>No recession within " + h + " months</span>";
+    return "<span class='badge badge-na'>Recession: not known yet</span>";
+  }
+
+  // ------------------------------------------------------------ HERO + CALLOUTS
+  function renderHero() {
+    const A = D.analogs, top = histRows[0];
+    if (A.is_placeholder) { $("placeholderBanner").classList.remove("hidden"); $("navPlaceholder").classList.remove("hidden"); }
+    if (!top) return;
+    $("heroYear").textContent = top.year;
+    $("heroScore").textContent = fx(top.similarity_score, 0);
+    requestAnimationFrame(() => $("heroRing").style.setProperty("--p", top.similarity_score));
+    const w = nextRow(top.year) || {};
+    $("heroNext").innerHTML =
+      "<div class='hn'><div class='hn-k'>Real S&amp;P, next 12 mo</div><div class='hn-v " + cls(w.sp_real_12m) + "'>" + signed(w.sp_real_12m, 0, "%") + "</div></div>" +
+      "<div class='hn'><div class='hn-k'>Next 24 mo</div><div class='hn-v " + cls(w.sp_real_24m) + "'>" + signed(w.sp_real_24m, 0, "%") + "</div></div>" +
+      "<div class='hn'><div class='hn-k'>Recession ≤ 24 mo</div><div class='hn-v'>" + (w.recession_24m === true ? "Yes" : w.recession_24m === false ? "No" : "–") + "</div></div>" +
+      "<p class='hero-next-cap'>What happened after December " + top.year + ". History, not a forecast.</p>";
+    const ol = $("heroRunners"); ol.innerHTML = "";
+    histRows.slice(1, 4).forEach((r, i) => {
+      const li = el("li"); const b = el("button", "", "<span class='r-rank'>#" + (i + 2) + "</span><span class='r-year'>" + r.year + "</span><span class='r-score'>" + fx(r.similarity_score, 0) + " / 100</span>");
+      b.type = "button"; b.setAttribute("aria-label", "Compare 2026 with " + r.year);
+      b.onclick = () => selectYear(r.year, true); li.appendChild(b); ol.appendChild(li);
+    });
+    const recent = D.analogs.rows.filter((r) => r.recent && isNum(r.similarity_score)).sort((a, b) => b.similarity_score - a.similarity_score);
+    if (recent.length) {
+      $("heroSanity").innerHTML = "<b>Recent years (sanity check):</b> " + recent.map((r) => r.year + " scores " + fx(r.similarity_score, 0)).join(", ") +
+        ". Neighbors always look alike, and their two-year aftermath hasn't happened yet, so they're left out of the headline.";
+    }
+  }
+
+  function renderCallouts() {
+    const box = $("callouts"); box.innerHTML = "";
+    if (D.analogs.is_placeholder || D.whatNext.is_placeholder) $("calloutsExample").classList.remove("hidden");
+    histRows.slice(0, 3).forEach((r, i) => {
+      const w = nextRow(r.year) || {};
+      const c = el("article", "callout" + (i === 0 ? " first" : ""));
+      const tags = closestFeatures(r.gaps, 3).map((f) => "<span class='tag'>" + FEAT[f].label.replace(/ \(.*\)/, "") + "</span>").join("");
+      c.innerHTML =
+        "<div class='co-top'><div class='co-year'>" + r.year + "</div><div class='co-rank'>#" + (i + 1) + " match<br>" + fx(r.similarity_score, 0) + " / 100</div></div>" +
+        "<p class='co-text'>" + lastTimeSentence(r.year, r.gaps) + "</p>" +
+        "<div class='co-nums'><div class='co-num'><div class='k'>Next 12 months</div><div class='v " + cls(w.sp_real_12m) + "'>" + signed(w.sp_real_12m, 0, "%") + "</div></div>" +
+        "<div class='co-num'><div class='k'>Next 24 months</div><div class='v " + cls(w.sp_real_24m) + "'>" + signed(w.sp_real_24m, 0, "%") + "</div></div></div>" +
+        "<div class='match-tags' aria-label='Closest-matching indicators'>" + tags + "</div>" +
+        "<div class='co-foot'>" + recessionBadge(w) + "<button class='linkbtn' type='button'>Explore " + r.year + " &rarr;</button></div>";
+      c.querySelector(".linkbtn").onclick = () => selectYear(r.year, true);
+      box.appendChild(c);
+    });
+  }
+
+  // ------------------------------------------------------------ TIME MACHINE
+  function buildYearPicker() {
+    const sel = $("yearSelect");
+    for (let y = TARGET - 1; y >= 1950; y--) { const o = el("option", "", String(y)); o.value = y; sel.appendChild(o); }
+    sel.onchange = () => selectYear(+sel.value);
+    $("prevYear").onclick = () => selectYear(Math.max(1950, selectedYear - 1));
+    $("nextYear").onclick = () => selectYear(Math.min(TARGET - 1, selectedYear + 1));
+    const chips = $("analogChips");
+    histRows.slice(0, 6).forEach((r, i) => {
+      const b = el("button", "chip", "<span class='chip-rank'>#" + (i + 1) + "</span>" + r.year); b.type = "button"; b.dataset.year = r.year;
+      b.onclick = () => selectYear(r.year); chips.appendChild(b);
+    });
+  }
+
+  function buildMiniGrid() {
+    const grid = $("miniGrid");
+    COMPARE_KEYS.forEach((key) => {
+      const m = IND[key];
+      const card = el("div", "mini");
+      card.innerHTML = "<div class='mini-head'><span class='mini-title'>" + m.label + "</span><span class='mini-vals' id='mv-" + key + "'></span></div>" +
+        "<div class='chart-box'><canvas id='mc-" + key + "' aria-label='" + m.long + ": 2026 vs selected year'></canvas></div><div class='mini-empty hidden' id='me-" + key + "'></div>";
+      card.title = m.explain;
+      grid.appendChild(card);
+      if (!HAS_CHART) return;
+      charts["mini-" + key] = new Chart($("mc-" + key), {
+        type: "line",
+        data: { datasets: [
+          { label: "2026", data: [], borderColor: C26, backgroundColor: C26, borderWidth: 3, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, spanGaps: true, order: 0 },
+          { label: "year", data: [], borderColor: CY, backgroundColor: CY, borderWidth: 2.25, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, spanGaps: true, order: 1 },
+        ] },
+        options: {
+          parsing: false, interaction: { mode: "index", intersect: false },
+          layout: { padding: { top: 4, right: 4 } },
+          scales: {
+            x: { type: "linear", min: 1, max: 12, grid: { display: false }, ticks: { stepSize: 1, autoSkip: true, maxTicksLimit: 6, callback: (v) => MONTHS[v - 1] ? MONTHS[v - 1][0] : "" } },
+            y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { maxTicksLimit: 4, callback: (v) => (m.prefix || "") + (Math.abs(v) >= 1000 ? (v / 1000) + "k" : v) + (m.unit === "%" ? "%" : "") } },
+          },
+          plugins: {
+            tooltip: { callbacks: { title: (it) => MONTHS[it[0].parsed.x - 1], label: (it) => " " + it.dataset.label + ": " + fmtInd(key, it.parsed.y) } },
+            bands: { bands: [] },
+          },
+        },
+      });
+    });
+  }
+
+  function updateMiniGrid(y) {
+    COMPARE_KEYS.forEach((key) => {
+      const a = yearMonths(key, TARGET), b = yearMonths(key, y);
+      const pts = (arr) => arr.map((v, i) => isNum(v) ? { x: i + 1, y: v } : null).filter(Boolean);
+      const last = (arr) => { for (let i = arr.length - 1; i >= 0; i--) if (isNum(arr[i])) return arr[i]; return null; };
+      const avg = (arr) => { const v = arr.filter(isNum); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+      $("mv-" + key).innerHTML = "<b class='v26'>" + fmtInd(key, last(a)) + "</b> vs <b class='vy'>" + fmtInd(key, avg(b)) + "</b> <span class='muted'>avg</span>";
+      const empty = !b.some(isNum);
+      const e = $("me-" + key); e.textContent = empty ? "No " + IND[key].label.toLowerCase() + " data for " + y : ""; e.classList.toggle("hidden", !empty);
+      const ch = charts["mini-" + key]; if (!ch) return;
+      ch.data.datasets[0].data = pts(a);
+      ch.data.datasets[1].data = pts(b); ch.data.datasets[1].label = String(y);
+      ch.options.plugins.bands.bands = recBands.filter(([s, e2]) => e2 > y && s < y + 1).map(([s, e2]) => [Math.max(s, y) - y + 1 - 0.5, Math.min(e2, y + 1) - y + 1 - 0.5]);
+      ch.update();
+    });
+  }
+
+  function selectYear(y, scroll) {
+    selectedYear = y;
+    $("yearSelect").value = y;
+    $("legendYear").textContent = y; $("legendYear2").textContent = y;
+    document.querySelectorAll("#analogChips .chip").forEach((c) => c.classList.toggle("active", +c.dataset.year === y));
+    updateMiniGrid(y);
+    renderNext(y);
+    renderGaps(y);
+    if (charts.history) updateHistory();
+    if (charts.rank) charts.rank.update("none");
+    if (scroll) $("machine").scrollIntoView({ behavior: "smooth" });
+  }
+
+  // ------------------------------------------------------------ WHAT HAPPENED NEXT
+  function stat(k, v, d) { return "<div class='stat'><div class='stat-k'>" + k + "</div><div class='stat-v " + (v.cls || "") + "'>" + v.txt + "</div><div class='stat-d'>" + (d || "") + "</div></div>"; }
+  function renderNext(y) {
+    const w = nextRow(y), h = nextH;
+    $("nextTitle").textContent = "After " + y + ", what happened next?";
+    $("nextChartYear").textContent = y;
+    const box = $("nextStats");
+    const known = w && isNum(w["sp_real_" + h + "m"]);
+    if (!w || (!known && !isNum(w["unemployment_" + h + "m"]))) {
+      $("nextSub").textContent = "";
+      box.innerHTML = "<div class='stat stat-wide'><div><div class='stat-k'>Not known yet</div><div class='stat-d'>The " + h + " months after December " + y + " haven't finished. That's why recent years are left out of the headline.</div></div></div>";
+    } else {
+      const base = w.base_month || y + "-12";
+      $("nextSub").textContent = "From " + monthName(base) + " to " + monthName((+base.slice(0, 4) + h / 12) + base.slice(4)) + ". Changes are in percentage points (pts) unless marked %.";
+      const p = (key, dec, unit) => ({ txt: signed(w[key + "_" + h + "m"], dec, unit), cls: cls(w[key + "_" + h + "m"]) });
+      box.innerHTML =
+        stat("Real S&amp;P 500", p("sp_real", 1, "%"), "inflation-adjusted, price only") +
+        stat("Unemployment", p("unemployment", 1, " pts"), "change in the jobless rate") +
+        stat("Inflation", p("inflation", 1, " pts"), "change in 12-month CPI inflation") +
+        stat("Fed funds rate", p("fed_funds", 2, " pts"), "change in the Fed's rate") +
+        stat("10-year yield", p("yield_10y", 2, " pts"), "change in long-term rates") +
+        stat("Gold", p("gold", 0, "%"), "price change") +
+        "<div class='stat stat-wide'><div class='stat-k'>Recession within " + h + " months?</div>" + recessionBadge(w, h).replace(/ within \d+ months/, "") + "</div>";
+      if (w.recession_start && ((h === 12 && w.recession_12m) || (h === 24 && w.recession_24m))) {
+        box.lastChild.insertAdjacentHTML("beforeend", "");
+        box.lastChild.querySelector(".stat-k").insertAdjacentHTML("afterend", "<span class='stat-d'>began " + monthName(w.recession_start) + "</span>");
+      }
+    }
+    if (HAS_CHART) {
+      // public-domain monthly series over the 24 months after December Y
+      const t0 = y + 11 / 12;
+      const line = (key, label, color, dash) => ({
+        label, borderColor: color, backgroundColor: color, borderWidth: 2.25, borderDash: dash || [], pointRadius: 0, tension: 0.25,
+        data: Array.from({ length: 25 }, (_, k) => { const ym = (y + Math.floor((11 + k) / 12)) + "-" + String(((11 + k) % 12) + 1).padStart(2, "0"); const v = val(key, ym); return isNum(v) ? { x: k, y: v } : null; }).filter(Boolean),
+      });
+      const ds = [line("Unemployment", "Unemployment", SAGE), line("Inflation_12m", "Inflation", SAND), line("FedFunds", "Fed funds", TEAL), line("Yield_10Y", "10-year yield", WGRAY, [5, 4])];
+      const bands = recBands.filter(([s, e]) => e > t0 && s < t0 + 2).map(([s, e]) => [Math.max(0, (s - t0) * 12), Math.min(24, (e - t0) * 12)]);
+      if (!charts.next) {
+        charts.next = new Chart($("nextChart"), {
+          type: "line", data: { datasets: ds },
+          options: {
+            parsing: false, interaction: { mode: "index", intersect: false },
+            scales: {
+              x: { type: "linear", min: 0, max: 24, grid: { display: false }, ticks: { stepSize: 6, callback: (v) => v === 0 ? "Dec " + selectedYear : "+" + v + " mo" } },
+              y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { maxTicksLimit: 6, callback: axisPct } },
+            },
+            plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } }, bands: { bands },
+              tooltip: { callbacks: { title: (it) => (it[0].parsed.x === 0 ? "Dec " + selectedYear : "+" + it[0].parsed.x + " months"), label: (it) => " " + it.dataset.label + ": " + fx(it.parsed.y, 2) + "%" } } },
+          },
+        });
+      } else {
+        charts.next.data.datasets = ds;
+        charts.next.options.plugins.bands.bands = bands;
+        charts.next.update();
+      }
+    }
+    renderNextTable(y);
+  }
+
+  function renderNextTable(y) {
+    const rows = histRows.slice(0, 5).slice();
+    if (!rows.some((r) => r.year === y) && y < TARGET) rows.push({ year: y, similarity_score: (analogRow(y) || {}).similarity_score, _sel: true });
+    let html = "<thead><tr><th>Year</th><th>Similarity</th><th>Real S&amp;P 12 mo</th><th>Real S&amp;P 24 mo</th><th>Unemployment 24 mo</th><th>Gold 24 mo</th><th>Recession ≤ 24 mo</th></tr></thead><tbody>";
+    rows.forEach((r) => {
+      const w = nextRow(r.year) || {};
+      html += "<tr data-year='" + r.year + "' class='" + (r.year === y ? "sel" : "") + "'><td><b>" + r.year + "</b>" + (r._sel ? " <span class='muted small'>(selected)</span>" : "") + "</td><td>" + fx(r.similarity_score, 0) + "</td>" +
+        "<td class='" + cls(w.sp_real_12m) + "'>" + signed(w.sp_real_12m, 1, "%") + "</td><td class='" + cls(w.sp_real_24m) + "'>" + signed(w.sp_real_24m, 1, "%") + "</td>" +
+        "<td>" + signed(w.unemployment_24m, 1, " pts") + "</td><td>" + signed(w.gold_24m, 0, "%") + "</td>" +
+        "<td>" + (w.recession_24m === true ? "<span class='badge badge-yes'>Yes</span>" : w.recession_24m === false ? "<span class='badge badge-no'>No</span>" : "–") + "</td></tr>";
+    });
+    $("nextTable").innerHTML = html + "</tbody>";
+    $("nextTable").querySelectorAll("tr[data-year]").forEach((tr) => tr.onclick = () => selectYear(+tr.dataset.year));
+    const top5 = histRows.slice(0, 5).map((r) => nextRow(r.year) || {});
+    const rec = top5.filter((w) => w.recession_24m === true).length;
+    const r24 = top5.map((w) => w.sp_real_24m).filter(isNum).sort((a, b) => a - b);
+    if (r24.length) {
+      const med = r24.length % 2 ? r24[(r24.length - 1) / 2] : (r24[r24.length / 2 - 1] + r24[r24.length / 2]) / 2;
+      $("nextSummary").innerHTML = "Of the top 5 historical matches, <strong>" + rec + " of 5</strong> were followed by a recession within two years. Real S&amp;P 24-month results ranged from <strong>" +
+        signed(r24[0], 0, "%") + "</strong> to <strong>" + signed(r24[r24.length - 1], 0, "%") + "</strong> (median " + signed(med, 0, "%") + "). Same-looking years, very different endings.";
+    }
+  }
+
+  // ------------------------------------------------------------ SNAPSHOT
+  function sparkSVG(vals, color) {
+    const v = vals.map((x) => (isNum(x) ? x : null)); const nums = v.filter(isNum); if (nums.length < 2) return "";
+    const min = Math.min(...nums), max = Math.max(...nums), W = 200, H = 36, pad = 3;
+    const pts = v.map((x, i) => x == null ? null : [(i / (v.length - 1)) * W, H - pad - ((x - min) / (max - min || 1)) * (H - 2 * pad)]).filter(Boolean);
+    const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const last = pts[pts.length - 1];
+    return "<svg class='spark' viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none' aria-hidden='true'><path d='" + d + "' fill='none' stroke='" + color + "' stroke-width='2' vector-effect='non-scaling-stroke'/><circle cx='" + last[0] + "' cy='" + last[1] + "' r='3' fill='" + color + "'/></svg>";
+  }
+  function renderSnapshot() {
+    const box = $("snapshotCards"), S = Object.assign({}, D.series.snapshot);
+    const ci = D.annual.features.indexOf("cape");
+    if (ci >= 0) {
+      const yrs = D.annual.years.filter((y) => isNum(D.annual.values[y][ci]));
+      const vals = yrs.map((y) => D.annual.values[y][ci]);
+      S.CAPE = { month: null, label: TARGET + " avg so far", value: D.annual.values[TARGET][ci], prev_month: String(TARGET - 1), prev_value: D.annual.values[TARGET - 1][ci],
+        avg: vals.reduce((a, b) => a + b, 0) / vals.length, spark: vals.slice(-30) };
+    }
+    SNAP_KEYS.forEach((key) => {
+      const s = S[key]; if (!s) return;
+      let label, valHtml, chg, explain, src;
+      if (key === "WTI_Oil") {
+        label = "Oil (WTI)"; valHtml = "$" + fx(s.value, 0) + "<span class='snap-unit'>/bbl</span>";
+        const p = isNum(s.prev_value) ? (s.value / s.prev_value - 1) * 100 : null;
+        chg = "<b>" + signed(p, 0, "%") + "</b> vs " + monthName(s.prev_month); explain = "Price of a barrel of U.S. crude. Sparkline: yearly % change."; src = "FRED (WTISPLC)";
+      } else if (key === "CAPE") {
+        label = "Stock valuation (CAPE)"; valHtml = fx(s.value, 1) + "<span class='snap-unit'>×</span>";
+        chg = "<b>" + signed((s.value / s.prev_value - 1) * 100, 0, "%") + "</b> vs " + s.prev_month + " avg";
+        explain = "Price of stocks vs 10 years of earnings. Long-run average: " + fx(s.avg, 0) + "×. Annual averages only."; src = "Robert Shiller (annual averages)";
+      } else {
+        const m = IND[key]; label = m.long.replace(/ \(.*\)/, ""); if (key === "Inflation_12m") label = "CPI inflation";
+        valHtml = (m.prefix || "") + fx(s.value, m.dec) + "<span class='snap-unit'>" + (m.unit.trim() || "") + "</span>";
+        const d = isNum(s.prev_value) ? (m.chg === "pct" ? (s.value / s.prev_value - 1) * 100 : s.value - s.prev_value) : null;
+        chg = "<b>" + (m.chg === "pct" ? signed(d, 1, "%") : signed(d, 2, " pts")) + "</b> vs " + monthName(s.prev_month); explain = m.explain; src = m.src;
+      }
+      const card = el("article", "snap");
+      card.innerHTML = "<div class='snap-top'><span class='snap-label'>" + label + "</span><span class='snap-month'>" + (s.label || monthName(s.month)) + "</span></div>" +
+        "<div class='snap-val'>" + valHtml + "</div><div class='snap-chg'>" + chg + "</div>" + sparkSVG(s.spark || [], C26) +
+        "<p class='snap-explain'>" + explain + "</p>";
+      card.title = "Source: " + src;
+      box.appendChild(card);
+    });
+  }
+
+  // ------------------------------------------------------------ RANKING + GAPS
+  function renderRanking() {
+    if (!HAS_CHART) return;
+    const rows = D.analogs.rows.filter((r) => isNum(r.similarity_score)).slice(0, 20);
+    $("rankTitle").innerHTML = "Top 20 years by similarity" + (D.analogs.is_placeholder ? " <span class='pill pill-warn'>Example data</span>" : "") + " <span class='muted'>(sand = year in the time machine · grey = recent, sanity check only)</span>";
+    charts.rank = new Chart($("rankChart"), {
+      type: "bar",
+      data: { labels: rows.map((r) => String(r.year)), datasets: [{ data: rows.map((r) => r.similarity_score), borderRadius: 6, borderSkipped: false, barPercentage: 0.8,
+        backgroundColor: (ctx) => { const r = rows[ctx.dataIndex]; if (!r) return SAGE; if (r.recent) return "rgba(168,160,151,0.35)"; if (r.year === selectedYear) return SAND; return "rgba(143,188,152,0.75)"; } }] },
+      options: {
+        indexAxis: "y", animation: { duration: 600 },
+        scales: { x: { min: 0, max: 100, grid: { color: "rgba(255,255,255,0.05)" } }, y: { grid: { display: false }, ticks: { autoSkip: false, font: { weight: 600 } } } },
+        plugins: { tooltip: { callbacks: { label: (it) => { const r = rows[it.dataIndex]; return " Similarity " + fx(r.similarity_score, 1) + (r.recent ? " (recent year, sanity check)" : " · historical #" + r.historical_rank); } } } },
+        onClick: (_e, els) => { if (els.length) selectYear(rows[els[0].index].year, true); },
+        onHover: (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; },
+      },
+    });
+  }
+  function renderGaps(y) {
+    $("gapYear").textContent = y;
+    if (!HAS_CHART) return;
+    const r = analogRow(y); const gaps = (r && r.gaps) || {};
+    const keys = Object.keys(FEAT).filter((f) => f in gaps && isNum(gaps[f]) && f !== "recession_share").sort((a, b) => Math.abs(gaps[a]) - Math.abs(gaps[b]));
+    const labels = keys.map((f) => FEAT[f].label.replace(/ \(.*\)/, "").replace(", yearly change", " (yoy)")), data = keys.map((f) => gaps[f]);
+    const colors = data.map((v) => Math.abs(v) < 0.5 ? GREEN : Math.abs(v) < 1 ? GOLD : PINK);
+    if (!charts.gap) {
+      charts.gap = new Chart($("gapChart"), {
+        type: "bar", data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 4, borderSkipped: false, barPercentage: 0.75 }] },
+        options: { indexAxis: "y", scales: { x: { suggestedMin: -2, suggestedMax: 2, grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.05)" }, title: { display: true, text: "← lower than 2026   ·   z-score gap   ·   higher than 2026 →" } }, y: { grid: { display: false }, ticks: { autoSkip: false } } },
+          plugins: { tooltip: { callbacks: { label: (it) => " " + signed(it.parsed.x, 2) + " standard deviations" } } } },
+      });
+    } else {
+      Object.assign(charts.gap.data, { labels }); Object.assign(charts.gap.data.datasets[0], { data, backgroundColor: colors }); charts.gap.update();
+    }
+    if (!keys.length) $("gapYear").textContent = y + " (no scored gaps)";
+  }
+
+  // ------------------------------------------------------------ HISTORY
+  let histKey = "Inflation_12m", histFrom = 1950;
+  function renderHistoryTabs() {
+    const tabs = $("historyTabs");
+    HISTORY_KEYS.forEach((k) => {
+      if (!series(k) && !IND[k].annual) return;
+      const b = el("button", "chip" + (k === histKey ? " active" : ""), IND[k].label); b.type = "button"; b.setAttribute("role", "tab");
+      b.onclick = () => { histKey = k; tabs.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b)); updateHistory(); };
+      tabs.appendChild(b);
+    });
+    document.querySelectorAll("#rangeToggle button").forEach((b) => b.onclick = () => {
+      histFrom = +b.dataset.from; document.querySelectorAll("#rangeToggle button").forEach((x) => x.classList.toggle("active", x === b)); updateHistory();
+    });
+  }
+  function updateHistory() {
+    if (!HAS_CHART) return;
+    const m = IND[histKey], dates = D.series.dates;
+    const data = [];
+    if (m.annual) {   // restricted series: annual averages only
+      const ci = D.annual.features.indexOf("cape");
+      D.annual.years.forEach((y) => { const v = D.annual.values[y][ci]; if (isNum(v)) data.push({ x: +y + 0.5, y: v }); });
+    } else series(histKey).forEach((v, i) => { if (isNum(v)) data.push({ x: tOf(dates[i]), y: v }); });
+    const first = data.length ? data[0].x : 1950;
+    $("historyTitle").textContent = m.long;
+    $("historyNote").textContent = first > 1950.5 ? "(data from " + Math.floor(first) + ")" : "";
+    $("historyExplain").textContent = m.explain + " Source: " + m.src + ".";
+    const hl = [{ from: TARGET, to: TARGET + 1, color: "rgba(143,188,152,0.20)", label: "2026", text: C26 }];
+    if (selectedYear) hl.push({ from: selectedYear, to: selectedYear + 1, color: "rgba(216,195,147,0.22)", label: String(selectedYear), text: CY });
+    const xmax = TARGET + 1;
+    if (!charts.history) {
+      charts.history = new Chart($("historyChart"), {
+        type: "line",
+        data: { datasets: [{ data, borderColor: C26, borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 3, tension: 0, spanGaps: false }] },
+        options: {
+          parsing: false, normalized: true, interaction: { mode: "nearest", axis: "x", intersect: false },
+          scales: { x: { type: "linear", min: histFrom, max: xmax, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 10 } },
+            y: { ticks: { includeBounds: false }, grid: { color: (c) => (m.zero && c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)") } } },
+          plugins: { bands: { bands: recBands, highlights: hl },
+            tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return IND[histKey].annual ? y + " average" : MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + fmtInd(histKey, it.parsed.y) } } },
+        },
+      });
+    } else {
+      const c = charts.history; c.data.datasets[0].data = data; c.options.scales.x.min = histFrom;
+      c.data.datasets[0].pointRadius = m.annual ? 2.5 : 0; c.data.datasets[0].stepped = m.annual ? "middle" : false;
+      c.options.plugins.bands.highlights = hl;
+      c.options.scales.y.grid.color = (ctx) => (IND[histKey].zero && ctx.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)");
+      c.options.plugins.tooltip.callbacks.label = (it) => " " + fmtInd(histKey, it.parsed.y);
+      c.update();
+    }
+    // fit y-axis to the visible window
+    const vis = data.filter((p) => p.x >= histFrom).map((p) => p.y);
+    if (vis.length) { const lo = Math.min(...vis), hi = Math.max(...vis), pad = (hi - lo) * 0.06 || 1; charts.history.options.scales.y.min = lo - pad; charts.history.options.scales.y.max = hi + pad; charts.history.update("none"); }
+  }
+
+  // ------------------------------------------------------------ BUILD YOUR OWN 2026
+  let B = null;
+  function initBuilder() {
+    const A = D.annual, F = A.features;
+    const actual = A.values[String(A.target_year)];
+    B = { F, actual: actual.slice(), cur: actual.slice(), inputs: {}, lastTop: null };
+    const mk = (f, host) => {
+      const i = F.indexOf(f); if (i < 0) return;
+      const meta = FEAT[f] || { label: f, unit: "", dec: 2, step: 0.1 };
+      const hist = Object.values(A.values).map((v) => v[i]).filter(isNum);
+      let lo = Math.min(...hist), hi = Math.max(...hist);
+      const span = hi - lo; lo = lo - span * 0.05; hi = hi + span * 0.05;
+      if (f === "recession_share") { lo = 0; hi = 1; }
+      lo = Math.floor(lo / meta.step) * meta.step; hi = Math.ceil(hi / meta.step) * meta.step;
+      const a = actual[i] == null ? (lo + hi) / 2 : actual[i];
+      const show = (v) => meta.pct ? fx(v * 100, 0) + "%" : (meta.signed ? signed(v, meta.dec, meta.unit) : fx(v, meta.dec) + meta.unit);
+      const row = el("div", "dial");
+      const id = "dial-" + f;
+      row.innerHTML = "<div class='dial-top'><label class='dial-label' for='" + id + "'>" + meta.label + "</label><span class='dial-val' id='" + id + "-v'>" + show(a) + "</span>" +
+        "<button class='dial-reset' type='button' id='" + id + "-r' disabled title='Reset to actual 2026'>&#8634; 2026</button></div>" +
+        "<div class='dial-track'><input type='range' id='" + id + "' min='" + lo + "' max='" + hi + "' step='" + meta.step + "' value='" + a + "'><span class='dial-actual' style='left:" + ((a - lo) / (hi - lo) * 100) + "%'></span></div>" +
+        "<div class='dial-meta'><span>" + show(lo) + "</span><span>actual 2026: " + show(a) + "</span><span>" + show(hi) + "</span></div>";
+      host.appendChild(row);
+      const inp = row.querySelector("input"), out = row.querySelector(".dial-val"), rb = row.querySelector(".dial-reset");
+      const paint = () => { inp.style.setProperty("--fill", ((inp.value - lo) / (hi - lo) * 100) + "%"); };
+      const set = (v, silent) => {
+        inp.value = v; B.cur[i] = +v; out.textContent = show(+v); paint();
+        const changed = Math.abs(+v - a) > meta.step / 2; out.classList.toggle("changed", changed); rb.disabled = !changed;
+        if (!silent) scheduleScore();
+      };
+      inp.addEventListener("input", () => set(inp.value));
+      rb.onclick = () => set(a);
+      B.inputs[f] = { set, actual: a, lo, hi };
+      paint();
+    };
+    MAIN_DIALS.forEach((f) => mk(f, $("dials")));
+    F.filter((f) => !MAIN_DIALS.includes(f)).forEach((f) => mk(f, $("dialsMore")));
+    $("resetAll").onclick = () => { Object.values(B.inputs).forEach((d) => d.set(d.actual, true)); scheduleScore(); };
+
+    const presets = [
+      { name: "Actual 2026", v: {} },
+      { name: "1970s stagflation", v: { inflation_12m: 10, unemployment: 7, fed_funds: 10, yield_10y: 9, yield_curve: -0.5, oil_yoy: 60, cape: 9, gold_yoy: 50, real_sp_yoy: -20 } },
+      { name: "Dot-com mania", v: { inflation_12m: 2.5, unemployment: 4, fed_funds: 5.5, yield_10y: 6, yield_curve: 0.1, oil_yoy: 40, cape: 42, real_sp_yoy: 20 } },
+      { name: "Deep recession", v: { inflation_12m: 1, unemployment: 9, fed_funds: 0.25, yield_10y: 3, yield_curve: 2.5, oil_yoy: -35, cape: 18, real_sp_yoy: -25, recession_share: 0.75 } },
+      { name: "Money-printing boom", v: { inflation_12m: 5, unemployment: 4, fed_funds: 0.25, yield_10y: 1.8, yield_curve: 1.2, oil_yoy: 50, cape: 36, m2_yoy: 18, gold_yoy: 15, real_sp_yoy: 20, home_price_yoy: 15 } },
+    ];
+    const pbox = $("presets");
+    presets.forEach((p) => {
+      const b = el("button", "chip" + (p.name === "Actual 2026" ? " active" : ""), p.name); b.type = "button";
+      b.onclick = () => {
+        pbox.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b));
+        Object.entries(B.inputs).forEach(([f, d]) => d.set(f in p.v ? Math.min(d.hi, Math.max(d.lo, p.v[f])) : d.actual, true));
+        scheduleScore();
+      };
+      pbox.appendChild(b);
+    });
+    $("builderOut").addEventListener("click", () => $("builderOut").classList.toggle("expanded"));
+    $("boNote").innerHTML = "Same method as the main ranking: annual averages, z-scores using fixed 1950–2026 means and spreads, weighted distance (" +
+      (A.weights_source.indexOf("analog_weights") >= 0 ? "weights from the scoring step, currently equal" : "equal weights") + "). " +
+      "Recent years (" + D.analogs.recent_years_excluded_from_headline.join(", ") + ") are skipped because their aftermath isn't known yet. Dials not shown stay at 2026's actual values.";
+    scoreNow();
+  }
+  let raf = 0;
+  function scheduleScore() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; scoreNow(); }); }
+  function scoreBuilder(vec) {
+    const A = D.annual, F = A.features, W = A.weights;
+    const feats = F.filter((f) => W[f] > 0);
+    const z = (f, v) => (v - A.means[f]) / A.sds[f];
+    const zt = {}; feats.forEach((f) => { const v = vec[F.indexOf(f)]; zt[f] = isNum(v) ? z(f, v) : null; });
+    const total = feats.reduce((s, f) => s + W[f], 0);
+    const out = [];
+    for (const ys in A.values) {
+      const y = +ys; if (y === A.target_year) continue;
+      const v = A.values[ys]; let wu = 0, ss = 0; const gaps = {};
+      feats.forEach((f) => { const x = v[F.indexOf(f)]; if (isNum(x) && zt[f] != null) { const g = z(f, x) - zt[f]; wu += W[f]; ss += W[f] * g * g; gaps[f] = g; } });
+      if (!wu) continue;
+      out.push({ year: y, d: Math.sqrt(ss / wu), ok: wu / total >= A.min_weight_share, gaps });
+    }
+    const dmax = Math.max(...out.filter((r) => r.ok).map((r) => r.d));
+    out.forEach((r) => r.sim = r.ok ? 100 * (1 - r.d / dmax) : null);
+    return out.filter((r) => r.ok).sort((a, b) => a.d - b.d);
+  }
+  function scoreNow() {
+    const recent = new Set(D.analogs.recent_years_excluded_from_headline || []);
+    const ranked = scoreBuilder(B.cur).filter((r) => !recent.has(r.year));
+    const top = ranked.slice(0, 3); if (!top.length) return;
+    const t = top[0];
+    const topEl = $("boTop");
+    if (B.lastTop !== t.year) {
+      topEl.innerHTML = "<span class='bo-year pop'>" + t.year + "</span><span class='bo-score'><b>" + fx(t.sim, 0) + "</b> / 100</span>";
+      B.lastTop = t.year;
+    } else topEl.querySelector(".bo-score").innerHTML = "<b>" + fx(t.sim, 0) + "</b> / 100";
+    $("boList").innerHTML = top.map((r, i) => "<li class='bo-row'><span class='n'>#" + (i + 1) + "</span><span class='y'>" + r.year + "</span><span class='bo-bar'><i style='width:" + Math.max(2, r.sim) + "%'></i></span><span class='s'>" + fx(r.sim, 0) + "</span></li>").join("");
+    const w = nextRow(t.year) || {};
+    $("boCallout").innerHTML = lastTimeSentence(t.year, t.gaps, true) + " " + recessionBadge(w);
+    $("boMini").innerHTML = "After " + t.year + ": real S&amp;P <b class='" + cls(w.sp_real_12m) + "'>" + signed(w.sp_real_12m, 0, "%") + "</b> (12 mo), <b class='" + cls(w.sp_real_24m) + "'>" + signed(w.sp_real_24m, 0, "%") + "</b> (24 mo) · recession ≤24 mo: <b>" + (w.recession_24m === true ? "yes" : w.recession_24m === false ? "no" : "–") + "</b>";
+  }
+
+  // ------------------------------------------------------------ MONEY & HARD ASSETS
+  const MONEY_SERIES = [
+    { key: "M2_YoY", label: "M2 money supply", color: SAGE, on: true },
+    { key: "FedBalanceSheet_YoY", label: "Fed balance sheet", color: TEAL, on: true },
+    { key: "Gold_YoY", label: "Gold", color: SAND, on: true },
+    { key: "Oil_YoY", label: "Oil", color: WGRAY, on: false },
+    { key: "HomePrice_YoY", label: "Home prices", color: SLATE, on: false },
+    { key: "MonetaryBase_YoY", label: "Monetary base", color: MAUVE, on: false },
+    { key: "FedDebt_YoY", label: "Federal debt", color: ROSE, on: false },
+  ];
+  let moneyFrom = 2000;
+  function renderMoney() {
+    const M = D.money || {};
+    if (!M.available) { $("moneyComing").classList.remove("hidden"); $("moneyBody").classList.add("hidden"); return; }
+    renderFindings();
+    // latest stats
+    const st = $("moneyStats");
+    const lastOf = (key) => { const s = series(key); if (!s) return null; for (let i = s.length - 1; i >= 0; i--) if (isNum(s[i])) return { v: s[i], m: D.series.dates[i] }; return null; };
+    [["M2_YoY", "M2 money supply"], ["RealM2_Growth", "Real M2 (after inflation)"], ["FedBalanceSheet_YoY", "Fed balance sheet"], ["MonetaryBase_YoY", "Monetary base"], ["FedDebt_YoY", "Federal debt"]].forEach(([k, label]) => {
+      const l = lastOf(k); if (!l) return;
+      st.insertAdjacentHTML("beforeend", stat(label, { txt: signed(l.v, 1, "%"), cls: cls(l.v) }, "vs a year earlier · " + monthName(l.m)));
+    });
+    // toggles
+    const tg = $("moneyToggles");
+    MONEY_SERIES.forEach((s) => {
+      if (!series(s.key)) return;
+      const b = el("button", "chip" + (s.on ? " active" : ""), "<i class='sw' style='background:" + s.color + ";width:12px;margin-right:6px;vertical-align:middle'></i>" + s.label); b.type = "button";
+      b.setAttribute("aria-pressed", s.on);
+      b.onclick = () => { s.on = !s.on; b.classList.toggle("active", s.on); b.setAttribute("aria-pressed", s.on); updateMoneyChart(); };
+      tg.appendChild(b);
+    });
+    document.querySelectorAll("#moneyRange button").forEach((b) => b.onclick = () => {
+      moneyFrom = +b.dataset.from; document.querySelectorAll("#moneyRange button").forEach((x) => x.classList.toggle("active", x === b)); updateMoneyChart();
+    });
+    whenVisible($("moneyChart"), updateMoneyChart);
+    initCycles();
+  }
+  function updateMoneyChart() {
+    if (!HAS_CHART) return;
+    const dates = D.series.dates;
+    const ds = MONEY_SERIES.filter((s) => s.on && series(s.key)).map((s) => ({
+      label: s.label, borderColor: s.color, backgroundColor: s.color, borderWidth: s.key === "M2_YoY" ? 2.5 : 1.75, pointRadius: 0, tension: 0.2,
+      data: series(s.key).map((v, i) => isNum(v) && tOf(dates[i]) >= moneyFrom ? { x: tOf(dates[i]), y: v } : null).filter(Boolean),
+    }));
+    if (!charts.money) {
+      charts.money = new Chart($("moneyChart"), {
+        type: "line", data: { datasets: ds },
+        options: {
+          parsing: false, normalized: true, interaction: { mode: "index", intersect: false },
+          scales: { x: { type: "linear", min: moneyFrom, max: TARGET + 1, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 10 } },
+            y: { suggestedMin: -20, suggestedMax: 40, grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: axisPct } } },
+          plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3, usePointStyle: false } }, bands: { bands: recBands },
+            tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + it.dataset.label + ": " + signed(it.parsed.y, 1, "%") } } },
+        },
+      });
+    } else { charts.money.data.datasets = ds; charts.money.options.scales.x.min = moneyFrom; charts.money.update(); }
+  }
+
+  function renderFindings() {
+    const E = (D.money.cycles || {}).easing || [], H = (D.money.cycles || {}).hiking || [];
+    const box = $("findings"); box.innerHTML = "";
+    const cur = E.find((c) => String(c.status || "").startsWith("ongoing"));
+    const done = (arr) => arr.filter((c) => !String(c.status || "").startsWith("ongoing") && (c.months || 0) >= 6);
+    const yr = (c) => c.start.slice(0, 4) + "–" + (c.end || "").slice(2, 4);
+    const card = (k, big, txt) => box.insertAdjacentHTML("beforeend", "<article class='finding'><div class='finding-k'>" + k + "</div><div class='finding-big'>" + big + "</div><p>" + txt + "</p></article>");
+    if (cur) {
+      const y0 = val("Yield_10Y", cur.start), y1 = val("Yield_10Y", cur.end);
+      const others = done(E).filter((c) => isNum(c.yield_10y_chg_during_pp));
+      const maxOther = others.reduce((m, c) => (c.yield_10y_chg_during_pp > m.v ? { v: c.yield_10y_chg_during_pp, c } : m), { v: -Infinity });
+      if (isNum(cur.yield_10y_chg_during_pp))
+        card("Bonds aren't buying the cuts", signed(cur.yield_10y_chg_during_pp, 1, " pts"),
+          "The 10-year yield has <strong>risen</strong> since the Fed started easing in " + monthName(cur.start) + " (" + fx(y0, 2) + "% → " + fx(y1, 2) + "%). In no earlier easing cycle of 6+ months did it rise more than <strong>" + signed(maxOther.v, 2, " pts") + "</strong>.");
+      const g0 = val("Gold", cur.start), g1 = val("Gold", cur.end);
+      const gOthers = done(E).concat(E.filter((c) => c !== cur && (c.months || 0) < 6)).filter((c) => c !== cur && isNum(c.gold_chg_during_pct));
+      const gMax = gOthers.reduce((m, c) => (c.gold_chg_during_pct > m.v ? { v: c.gold_chg_during_pct, c } : m), { v: -Infinity });
+      if (isNum(cur.gold_chg_during_pct))
+        card("Gold's best easing on record", signed(cur.gold_chg_during_pct, 0, "%"),
+          "Gold went from $" + fx(g0, 0) + " to $" + fx(g1, 0) + " during this easing, the biggest gain in any easing cycle since 1960. The previous high: about <strong>" + signed(gMax.v, 0, "%") + "</strong> in " + (gMax.c ? yr(gMax.c) : "–") + ".");
+    }
+    const big = done(H).filter((c) => c.recession_within_24m_after_end != null && c.recession_within_24m_after_end !== "");
+    const m2min = H.filter((c) => isNum(c.m2_yoy_chg_during_pp)).reduce((m, c) => (c.m2_yoy_chg_during_pp < m.v ? { v: c.m2_yoy_chg_during_pp, c } : m), { v: Infinity });
+    if (m2min.c) {
+      const nRec = big.filter((c) => +c.recession_within_24m_after_end === 1).length;
+      const c = m2min.c, noRec = +c.recession_within_24m_after_end === 0;
+      card("The money squeeze that didn't bite", signed(m2min.v, 1, " pts"),
+        "The " + yr(c) + " hikes caused the sharpest collapse in M2 growth on record" + (noRec ? ", yet <strong>no recession</strong> followed within 24 months" : "") + ". By contrast, <strong>" + nRec + " of " + big.length + "</strong> substantial hiking cycles were followed by one.");
+    }
+  }
+
+  let cycleKind = "easing";
+  function initCycles() {
+    const C = D.money.cycles || {};
+    if (!((C.easing || []).length || (C.hiking || []).length)) { $("cyclesCard").innerHTML = "<span class='pill pill-warn'>Data coming</span> <span class='muted'>Fed-cycle tables not found yet.</span>"; return; }
+    document.querySelectorAll("#cycleKind button").forEach((b) => b.onclick = () => {
+      cycleKind = b.dataset.kind; document.querySelectorAll("#cycleKind button").forEach((x) => { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b); }); fillCycles();
+    });
+    $("cycleShort").onchange = fillCycles;
+    $("cycleSelect").onchange = renderCycle;
+    fillCycles();
+  }
+  function cycleList() {
+    const all = (D.money.cycles[cycleKind] || []).slice();
+    return $("cycleShort").checked ? all : all.filter((c) => (c.months || 0) >= 6 || String(c.status || "").startsWith("ongoing"));
+  }
+  function fillCycles() {
+    const sel = $("cycleSelect"); sel.innerHTML = "";
+    cycleList().slice().reverse().forEach((c) => {
+      const ongoing = String(c.status || "").startsWith("ongoing");
+      const o = el("option", "", monthName(c.start) + " → " + (ongoing ? "now" : monthName(c.end)) + " · " + signed(c.size_pp, 2, " pts") + (ongoing ? " (ongoing)" : ""));
+      o.value = c.start; sel.appendChild(o);
+    });
+    renderCycle();
+  }
+  function renderCycle() {
+    const c = cycleList().find((x) => x.start === $("cycleSelect").value); if (!c) return;
+    const ongoing = String(c.status || "").startsWith("ongoing");
+    const s = (k, label, unit, d, note) => stat(label, { txt: signed(c[k], d, unit), cls: cls(c[k]) }, note);
+    $("cycleStats").innerHTML =
+      stat("Fed funds", { txt: fx(c.fedfunds_start, 2) + "% → " + fx(c.fedfunds_end, 2) + "%" }, c.months + " months" + (ongoing ? ", still going" : "")) +
+      s("yield_10y_chg_during_pp", "10-year yield, during", " pts", 2, "after 12 mo: " + signed(c.yield_10y_chg_12m_after_pp, 2, " pts")) +
+      s("m2_yoy_chg_during_pp", "M2 growth, during", " pts", 1, "after 12 mo: " + signed(c.m2_yoy_chg_12m_after_pp, 1, " pts")) +
+      s("gold_chg_during_pct", "Gold, during", "%", 0, "after 12 mo: " + signed(c.gold_chg_12m_after_pct, 0, "%")) +
+      s("wti_oil_chg_during_pct", "Oil, during", "%", 0, "after 12 mo: " + signed(c.wti_oil_chg_12m_after_pct, 0, "%")) +
+      s("sp_real_chg_during_pct", "Real S&amp;P 500, during", "%", 0, "after 12 mo: " + signed(c.sp_real_chg_12m_after_pct, 0, "%")) +
+      "<div class='stat stat-wide'><div class='stat-k'>Recession</div><span>" +
+      (+c.recession_during_cycle === 1 ? "<span class='badge badge-yes'>During cycle</span> " : "") +
+      (c.recession_within_24m_after_end === 1 ? "<span class='badge badge-yes'>Within 24 mo after</span>" : c.recession_within_24m_after_end === 0 ? "<span class='badge badge-no'>None within 24 mo after</span>" : "<span class='badge badge-na'>After: not known yet</span>") + "</span></div>";
+    $("cycleNote").textContent = (c.note ? "Note: " + c.note + ". " : "") + "Shaded: the cycle. Lines run from 12 months before to 12 months after. Gold is indexed to 100 at the cycle start (right axis).";
+    if (!HAS_CHART) return;
+    const t0 = tOf(c.start), t1 = tOf(c.end || D.series.dates[D.series.dates.length - 1]);
+    const lo = t0 - 1, hi = Math.min(t1 + 1, TARGET + 0.75);
+    const dates = D.series.dates;
+    const pick = (key, f) => { const s = series(key); return s ? s.map((v, i) => { const t = tOf(dates[i]); return isNum(v) && t >= lo && t <= hi ? { x: t, y: f ? f(v) : v } : null; }).filter(Boolean) : []; };
+    const g0 = val("Gold", c.start);
+    const ds = [
+      { label: "Fed funds %", data: pick("FedFunds"), borderColor: C26, borderWidth: 2.5, yAxisID: "y" },
+      { label: "10-year yield %", data: pick("Yield_10Y"), borderColor: WGRAY, borderWidth: 2, yAxisID: "y" },
+      { label: "M2 growth %", data: pick("M2_YoY"), borderColor: CY2, borderWidth: 1.5, borderDash: [5, 4], yAxisID: "y" },
+      { label: "Gold (start = 100)", data: isNum(g0) ? pick("Gold", (v) => v / g0 * 100) : [], borderColor: GOLD, borderWidth: 2, yAxisID: "y2" },
+    ].map((d) => Object.assign({ pointRadius: 0, tension: 0.2, backgroundColor: d.borderColor }, d));
+    const hl = [{ from: t0, to: t1 + 1 / 12, color: cycleKind === "easing" ? "rgba(143,188,152,0.12)" : "rgba(216,195,147,0.12)" }];
+    if (!charts.cycle) {
+      charts.cycle = new Chart($("cycleChart"), {
+        type: "line", data: { datasets: ds },
+        options: {
+          parsing: false, interaction: { mode: "index", intersect: false },
+          scales: { x: { type: "linear", min: lo, max: hi, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 8 } },
+            y: { position: "left", ticks: { callback: axisPct }, grid: { color: "rgba(255,255,255,0.05)" } },
+            y2: { position: "right", grid: { display: false }, ticks: { color: GOLD } } },
+          plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } }, bands: { bands: recBands, highlights: hl },
+            tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + it.dataset.label + ": " + fx(it.parsed.y, 1) } } },
+        },
+      });
+    } else {
+      const ch = charts.cycle; ch.data.datasets = ds; ch.options.scales.x.min = lo; ch.options.scales.x.max = hi; ch.options.plugins.bands.highlights = hl; ch.update();
+    }
+  }
+
+
+  // ------------------------------------------------------------ QR CODE + PRESENT MODE
+  const CFG = window.SITE_CONFIG || { SITE_URL: location.href.split(/[?#]/)[0], SITE_URL_IS_PLACEHOLDER: true };
+  function qrSVG(text) {
+    if (typeof window.qrcode !== "function") return null;
+    const q = window.qrcode(0, "M"); q.addData(text); q.make();
+    return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  }
+  function initQR() {
+    const url = CFG.SITE_URL;
+    const svg = qrSVG(url);
+    const ph = CFG.SITE_URL_IS_PLACEHOLDER;
+    const urlText = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const fill = (id) => { const n = $(id); if (!n) return; n.innerHTML = svg || "<span class='muted small'>QR library didn't load</span>"; if (ph) n.insertAdjacentHTML("beforeend", "<span class='qr-ph'>placeholder URL</span>"); };
+    fill("qrSmall"); fill("qrLarge");
+    $("qrUrl").textContent = urlText + (ph ? "  (placeholder: set SITE_URL in config.js)" : "");
+    $("qrUrlBig").textContent = urlText;
+    const open = () => { $("qrOverlay").classList.remove("hidden"); document.body.classList.add("no-scroll"); };
+    const close = () => { $("qrOverlay").classList.add("hidden"); document.body.classList.remove("no-scroll"); };
+    $("qrOpen").onclick = open; $("qrBig").onclick = open; $("qrOverlay").onclick = close;
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+    const params = new URLSearchParams(location.search);
+    if (params.get("present") === "1" || params.get("qr") === "1" || location.hash === "#present") open();
+  }
+
+  // ------------------------------------------------------------ THE PRINTING PRESS
+  const T = (bn, d = 1) => isNum(bn) ? "$" + fx(bn / 1000, d) + "T" : "–";
+  function counterCard(k, target, fmt, sub, big) {
+    return "<article class='counter" + (big ? " counter-big" : "") + (big === "debt" ? " counter-debt" : "") + "'><div class='counter-k'>" + k + "</div><div class='counter-v' data-target='" + target + "' data-fmt='" + fmt + "'>" + formatCounter(fmt, target) + "</div><p class='counter-sub'>" + sub + "</p></article>";
+  }
+  function formatCounter(fmt, v) {
+    if (fmt === "x") return fx(v, 1) + "×";
+    if (fmt === "T") return "$" + fx(v / 1000, 1) + "T";
+    if (fmt === "pct") return "+" + fx(v, 1) + "%";
+    return fx(v, 0);
+  }
+  function animateCounters(root) {
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.querySelectorAll(".counter-v").forEach((n, i) => {
+      const target = +n.dataset.target, fmt = n.dataset.fmt;
+      if (reduce) { n.textContent = formatCounter(fmt, target); return; }
+      const dur = 1400 + i * 120, t0 = performance.now();
+      const step = (t) => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); n.textContent = formatCounter(fmt, target * e); if (p < 1) requestAnimationFrame(step); };
+      n.textContent = formatCounter(fmt, 0); requestAnimationFrame(step);
+    });
+  }
+  function renderPress() {
+    const M = D.money || {}, H = M.headline || {};
+    if (!M.levels || !H.fed_2008) { $("pressComing").classList.remove("hidden"); $("pressBody").classList.add("hidden"); return; }
+    const f08 = H.fed_2008, f20 = H.fed_2020, ft = H.fed_total, mp = H.m2_peak_yoy, m08 = H.m2_since_2008, m20 = H.m2_since_2020, d08 = H.debt_since_2008, d20 = H.debt_since_2020;
+    $("counters").innerHTML =
+      counterCard("Fed balance sheet, 2008 crisis", f08.multiple, "x", T(f08.before, 2) + " (" + monthName(f08.before_month) + ") → " + T(f08.peak, 2) + " (" + monthName(f08.peak_month) + ")", true) +
+      counterCard("Fed balance sheet, 2020 pandemic", f20.multiple, "x", T(f20.before, 2) + " (" + monthName(f20.before_month) + ") → " + T(f20.peak, 2) + " (" + monthName(f20.peak_month) + "): <b>+" + T(f20.added, 1) + "</b> in " + monthsBetween(f20.before_month, f20.peak_month) + " months", true) +
+      counterCard("Pre-Lehman to peak", ft.multiple, "x", "Fed balance sheet " + T(ft.from, 2) + " → " + T(ft.peak, 2) + ". Today: " + T(ft.latest, 2) + " (" + monthName(ft.latest_month) + ")") +
+      counterCard("Peak money-supply growth", mp.pct, "pct", "M2 grew " + fx(mp.pct, 1) + "% in the year to " + monthName(mp.month) + ", the fastest since records began in 1960") +
+      counterCard("M2 dollars added since 2008", m08.added, "T", T(m08.from) + " (Dec 2007) → " + T(m08.to) + " (" + monthName(m08.to_month) + "), " + fx(m08.multiple, 1) + "×") +
+      counterCard("M2 dollars added since 2020", m20.added, "T", T(m20.from) + " (Dec 2019) → " + T(m20.to) + ": +" + fx(m20.pct, 0) + "% in " + fx(monthsBetween("2019-12", m20.to_month) / 12, 1) + " years") +
+      (d08 ? counterCard("Federal debt added since 2008", d08.added, "T", T(d08.from) + " (Dec 2007) → " + T(d08.to) + " (" + monthName(d08.to_month) + "), " + fx(d08.multiple, 1) + "×") : "") +
+      (d20 ? counterCard("Federal debt added since 2020", d20.added, "T", T(d20.from) + " (Dec 2019) → " + T(d20.to) + ": +" + fx(d20.pct, 0) + "%", "debt") : "");
+    whenVisible($("counters"), () => animateCounters($("counters")));
+    document.querySelectorAll("#pressMode button").forEach((b) => b.onclick = () => {
+      pressMode = b.dataset.mode; document.querySelectorAll("#pressMode button").forEach((x) => x.classList.toggle("active", x === b)); updatePressChart();
+    });
+    whenVisible($("pressChart"), updatePressChart);
+    renderProjection(histRows[0] ? histRows[0].year : 2007);
+  }
+  function monthsBetween(a, b) { return (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7)); }
+  let pressMode = "level";
+  const PRESS_SERIES = [
+    { key: "FedDebt", yoy: "FedDebt_YoY", label: "Federal debt", color: ROSE },
+    { key: "M2", yoy: "M2_YoY", label: "M2 money supply", color: SAGE },
+    { key: "FedBalanceSheet", yoy: "FedBalanceSheet_YoY", label: "Fed balance sheet", color: TEAL },
+    { key: "MonetaryBase", yoy: "MonetaryBase_YoY", label: "Monetary base", color: SAND },
+  ];
+  function updatePressChart() {
+    if (!HAS_CHART) return;
+    const L = D.money.levels || {}, dates = D.series.dates, lvl = pressMode === "level";
+    const from = lvl ? 2000 : 1960;
+    const ds = PRESS_SERIES.filter((s) => lvl ? L[s.key] : series(s.yoy)).map((s) => ({
+      label: s.label, borderColor: s.color, backgroundColor: s.color, borderWidth: s.key === "FedBalanceSheet" ? 3 : 2, pointRadius: 0, tension: 0.15, spanGaps: s.key === "FedDebt",
+      data: (lvl ? L[s.key] : series(s.yoy)).map((v, i) => { const t = tOf(dates[i]); return isNum(v) && t >= from ? { x: t, y: lvl ? v / 1000 : v } : null; }).filter(Boolean),
+    }));
+    $("pressChartTitle").innerHTML = lvl ? "Printing during crises <span class='muted'>(US$ trillions)</span>" : "Printing during crises <span class='muted'>(% growth vs a year earlier)</span>";
+    const hl = [{ from: 2008 + 8 / 12, to: 2008 + 9 / 12, color: "rgba(0,0,0,0)", label: "Lehman", text: WGRAY }, { from: 2020 + 2 / 12, to: 2020 + 3 / 12, color: "rgba(0,0,0,0)", label: "COVID", text: WGRAY }];
+    const opts = {
+      parsing: false, normalized: true, interaction: { mode: "index", intersect: false },
+      scales: { x: { type: "linear", min: from, max: TARGET + 1, grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 10 } },
+        y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => lvl ? "$" + v + "T" : v + "%" } } },
+      plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } }, bands: { bands: recBands, highlights: hl },
+        tooltip: { callbacks: { title: (it) => { const t = it[0].parsed.x; const y = Math.floor(t + 1e-6); return MONTHS[Math.round((t - y) * 12)] + " " + y; }, label: (it) => " " + it.dataset.label + ": " + (lvl ? "$" + fx(it.parsed.y, 2) + "T" : signed(it.parsed.y, 1, "%")) } } },
+    };
+    if (charts.press) { charts.press.destroy(); }
+    charts.press = new Chart($("pressChart"), { type: "line", data: { datasets: ds }, options: opts });
+  }
+  function renderProjection(y) {
+    const P = (D.money || {}).projection_growth; if (!P) return;
+    const chips = $("projChips");
+    if (!chips.childElementCount) histRows.slice(0, 5).forEach((r, i) => {
+      const b = el("button", "chip", "<span class='chip-rank'>#" + (i + 1) + "</span>" + r.year); b.type = "button"; b.dataset.year = r.year;
+      b.onclick = () => renderProjection(r.year); chips.appendChild(b);
+    });
+    chips.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", +c.dataset.year === y));
+    const g = P.years[String(y)] || {}, today = P.today || {};
+    $("projTitle").innerHTML = "If 2026 follows " + y + "&hellip;";
+    const rows = [
+      { k: "FedBalanceSheet", label: "Fed balance sheet" },
+      { k: "M2", label: "M2 money supply" },
+      { k: "MonetaryBase", label: "Monetary base" },
+    ];
+    const endMonth = (m) => monthName((+m.slice(0, 4) + 2) + m.slice(4));
+    $("projGrid").innerHTML = rows.map((r) => {
+      const t = today[r.k], gr = g[r.k];
+      if (!t) return "";
+      if (!isNum(gr)) {
+        return "<div class='proj-item proj-na'><div class='proj-k'>" + r.label + "</div><div class='proj-v'>n/a</div><p class='proj-sub'>" +
+          (r.k === "FedBalanceSheet" ? "The Fed balance sheet series (WALCL) starts in Dec 2002, so there's no " + y + "–" + (y + 2) + " comparison. M2 and the monetary base are used instead." : "No data for " + y + "–" + (y + 2) + ".") + "</p></div>";
+      }
+      const add = t.level * gr / 100;
+      return "<div class='proj-item' title='" + T(t.level, 2) + " × " + fx(gr, 1) + "% = " + (add >= 0 ? "+" : "−") + T(Math.abs(add), 2) + "'><div class='proj-k'>" + r.label + "</div>" +
+        "<div class='proj-v " + (add >= 0 ? "" : "down") + "'>" + (add >= 0 ? "+" : "−") + T(Math.abs(add), 1) + "</div>" +
+        "<p class='proj-sub'>" + T(t.level, 2) + " today (" + monthName(t.month) + ") → <b>" + T(t.level + add, 2) + "</b> by " + endMonth(t.month) + "<br>" + y + "–" + (y + 2) + " growth: " + signed(gr, 1, "%") + "</p></div>";
+    }).join("");
+    const tip = "Implied added dollars = today's level × (level in Dec " + (y + 2) + " ÷ level in Dec " + y + " − 1). Example: Fed balance sheet " +
+      (isNum(g.FedBalanceSheet) && today.FedBalanceSheet ? T(today.FedBalanceSheet.level, 2) + " × " + fx(g.FedBalanceSheet, 1) + "%." : "not available before Dec 2002.");
+    $("projFormula").querySelector(".tip").textContent = tip;
+    $("projFormula").querySelector(".info").setAttribute("title", tip);
+    $("projNote").textContent = "Historical arithmetic, not a forecast. It shows what repeating " + y + "–" + (y + 2) + "'s money growth would mean at today's size. Today's levels: Fed balance sheet = monthly average of weekly WALCL; M2 = M2SL; monetary base = BOGMBASE (all Federal Reserve Board via FRED).";
+  }
+
+  // ------------------------------------------------------------ WHAT IT MEANS PER TAXPAYER
+  // data/money.json -> per_taxpayer, built from data/per_taxpayer*.csv (definitions: docs/method.md)
+  const usd = (v) => isNum(v) ? (v < 0 ? "−$" : "$") + fx(Math.abs(v), 0) : "–";
+  const usdK = (v) => !isNum(v) ? "–" : Math.abs(v) >= 1e6 ? "$" + fx(v / 1e6, 1) + "M" : Math.abs(v) >= 1e4 ? "$" + fx(v / 1e3, 0) + "k" : usd(v);
+  const tn = (bn, d = 1) => isNum(bn) ? (bn >= 1000 ? "$" + fx(bn / 1000, d) + "T" : "$" + fx(bn, 0) + "bn") : "–";
+  const yrs = (v) => !isNum(v) ? "–" : v < 1 ? fx(v * 12, v * 12 < 10 ? 1 : 0) + "<small>months</small>" : fx(v, v < 100 ? 1 : 0) + "<small>years</small>";
+  const pct0 = (r) => fx(r * 100, r * 100 < 20 ? 1 : 0) + "%";
+  const FLAG_LABEL = { returns_filed: "taxpayer count (returns filed)", taxable_returns: "taxable-return count", soi_total_income_tax_bn: "IRS income-tax total",
+    indiv_income_tax_receipts_bn: "income-tax receipts", total_receipts_bn: "total receipts", surplus_deficit_bn: "deficit", interest_outlays_bn: "interest outlays",
+    population: "population", households: "household count", median_hh_income_usd: "median household income", debt: "debt" };
+  let ptxMode = "year", ptxBasis = "taxpayer", ptxTimer = null, ptxNotes = [];
+  function ptxData() {
+    const P = (D.money || {}).per_taxpayer;
+    if (!P || !P.available || !P.years || !P.years.length) return null;
+    const Y = {}; P.years.forEach((r) => (Y[r.label] = r));
+    const win = (re) => (P.windows || []).find((w) => re.test(w.label));
+    const lastWith = (k, maxYear) => P.years.slice().reverse().find((r) => isNum(r[k]) && (!maxYear || +r.label <= maxYear));
+    return { P, Y, lastWith, latest: P.years[P.years.length - 1], covid: win(/covid|2020/i), gfc: win(/gfc|2008/i), cum: win(/cumulative/i), clock: P.debt_clock, proj: P.projection };
+  }
+  // footnotes from the CSV 'flags' column: fn(row, ["households", ...]) -> superscript markers
+  function fn(row, keys, extra) {
+    const out = [];
+    const add = (t) => { let k = ptxNotes.indexOf(t); if (k < 0) { ptxNotes.push(t); k = ptxNotes.length - 1; } if (out.indexOf(k + 1) < 0) out.push(k + 1); };
+    (row && row.flags || []).forEach((f) => {
+      const eq = f.indexOf("="), key = eq > 0 ? f.slice(0, eq) : f, val = eq > 0 ? f.slice(eq + 1) : "";
+      if (keys.some((k) => key === k || key.toLowerCase().startsWith(k.toLowerCase()))) add(row.label + ": " + (FLAG_LABEL[key] || key) + " = " + val + ".");
+    });
+    (extra || []).forEach(add);
+    return out.length ? "<sup class='fn'>" + out.map((n) => "<a href='#ptxNote" + n + "'>" + n + "</a>").join(",") + "</sup>" : "";
+  }
+  function renderPerTaxpayer() {
+    const X = ptxData();
+    if (!X) {
+      $("ptxBadge").innerHTML = "<span class='pill pill-warn'>Data coming</span>";
+      ["ptxFacts"].forEach((id) => $(id).classList.add("hidden"));
+      $("ptx").querySelectorAll(".ptx-grid,.ptx-chart-card,.ptx-notes-wrap").forEach((n) => n.classList.add("hidden"));
+      return;
+    }
+    ptxNotes = [];
+    renderPtxFacts(X);
+    document.querySelectorAll("#ptxMode button").forEach((b) => b.onclick = () => {
+      ptxMode = b.dataset.mode; document.querySelectorAll("#ptxMode button").forEach((x) => x.classList.toggle("active", x === b)); updatePtxChart();
+    });
+    document.querySelectorAll("#ptxBasis button").forEach((b) => b.onclick = () => {
+      ptxBasis = b.dataset.basis; document.querySelectorAll("#ptxBasis button").forEach((x) => x.classList.toggle("active", x === b)); updatePtxChart();
+    });
+    whenVisible($("ptxChart"), updatePtxChart);
+    // calculator
+    const avgRow = X.lastWith("income_tax_per_taxpayer"), avg = avgRow ? avgRow.income_tax_per_taxpayer : null;
+    const presets = [[2500, "$2,500"], [10000, "$10,000"], [25000, "$25,000"], [50000, "$50,000"]];
+    if (isNum(avg)) presets.splice(2, 0, [Math.round(avg), "Average taxpayer (" + usd(avg) + ")"]);
+    const box = $("ptxPresets"); box.innerHTML = "";
+    presets.forEach(([v, lab]) => { const b = el("button", "chip", lab); b.type = "button"; b.dataset.v = v; b.onclick = () => { $("ptxTax").value = v; updateCalc(); }; box.appendChild(b); });
+    $("ptxTax").value = isNum(avg) ? Math.round(avg) : 10000;
+    $("ptxTax").oninput = updateCalc;
+    updateCalc();
+    renderGauge(X);
+    renderHH(X);
+    startTicker(X);
+    $("ptxNotes").innerHTML = ptxNotes.map((t, k) => "<li id='ptxNote" + (k + 1) + "'>" + t + "</li>").join("");
+  }
+  function renderPtxFacts(X) {
+    const { Y, covid, clock, proj, latest } = X, cards = [];
+    const card = (cls, k, v, body, tag) => cards.push("<article class='ptx-fact " + cls + "'><div class='ptx-fact-k'>" + k + "</div><div class='ptx-fact-v'>" + v + "</div><p>" + body + "</p>" + (tag ? "<span class='tagline'>" + tag + "</span>" : "") + "</article>");
+    const y20 = Y["2020"];
+    if (y20 && isNum(y20.m2_vs_income_tax)) card("m2", "2020: new money vs. income tax", fx(y20.m2_vs_income_tax, 1) + "×",
+      "In 2020, M2 grew <b>" + tn(y20.m2_added_bn, 2) + "</b>: <b>" + usd(y20.m2_added_per_taxpayer) + "</b> per taxpayer, versus " + usd(y20.income_tax_per_taxpayer) + " of average income tax paid." +
+      (covid ? " Over " + covid.years.replace("-", "–") + ": <b>" + usd(covid.m2_added_per_taxpayer) + "</b> versus " + usd(covid.income_tax_per_taxpayer) + "." : ""));
+    if (covid && isNum(covid.fed_bs_change_per_taxpayer)) card("", "The Fed's pandemic printing", usd(covid.fed_bs_change_per_taxpayer) + "<small>per taxpayer</small>",
+      "The Fed's balance sheet grew <b>" + tn(covid.fed_bs_change_bn) + "</b> in " + covid.years.replace("-", "–") + ", paid for with newly created reserves.");
+    if (clock) {
+      const taxRow = latest;
+      card("debt", "Debt, last 12 months", usd(clock.per_taxpayer) + "<small>per taxpayer</small>",
+        "The debt rose <b>" + tn(clock.change_bn, 2) + "</b> in the 12 months to " + dayName(clock.to) + ": about <b>$" + fx(clock.per_day_bn, 1) + "bn a day</b>, <b>$" + fx(clock.per_second / 1000, 0) + "k a second</b>. That's " +
+        usd(clock.per_taxpayer) + " per taxpayer" + fn(taxRow, ["returns_filed"]) + ", versus " + usd(taxRow.income_tax_per_taxpayer) + " of average income tax" + fn(taxRow, ["indiv_income_tax_receipts_bn"]) + ".");
+    }
+    const hhRow = X.lastWith("debt_hh_to_median_income"), y90 = Y["1990"], first = (Y["1970"] && isNum(Y["1970"].years_tax_to_pay_debt)) ? Y["1970"] : X.P.years.find((r) => isNum(r.years_tax_to_pay_debt));
+    if (hhRow) card("debt", "Debt per household", fx(hhRow.debt_hh_to_median_income, 1) + "<small>years of income</small>",
+      "Debt per household is <b>" + usd(hhRow.debt_per_household) + "</b>" + fn(hhRow, ["debt", "households"]) + ", or " + fx(hhRow.debt_hh_to_median_income, 1) + " years of median household income (" + usd(hhRow.median_household_income) + fn(hhRow, ["median_hh_income_usd"]) + ")." +
+      (y90 && isNum(y90.debt_hh_to_median_income) ? " In 1990 it was " + fx(y90.debt_hh_to_median_income, 1) + "." : "") +
+      (isNum(hhRow.years_tax_to_pay_debt) ? " Paying it off would take <b>" + fx(hhRow.years_tax_to_pay_debt, 1) + " years</b> of all individual income taxes" + fn(hhRow, ["indiv_income_tax_receipts_bn"]) + (first ? ", versus " + fx(first.years_tax_to_pay_debt, 1) + " in " + first.label : "") + "." : ""));
+    // interest: latest year with actual (non-carried) budget data
+    const iRow = X.P.years.slice().reverse().find((r) => isNum(r.interest_vs_income_tax) && !(r.flags || []).some((f) => f.startsWith("interest_outlays_bn")));
+    if (iRow) {
+      const r = iRow.interest_vs_income_tax, y21 = Y["2021"];
+      const higher = X.P.years.filter((x) => isNum(x.interest_vs_income_tax) && x.interest_vs_income_tax > r && +x.label < +iRow.label);
+      let hist = "";
+      if (higher.length) {   // the record years (within half a point of the peak)
+        const pk = Math.max(...higher.map((x) => x.interest_vs_income_tax)), top = higher.filter((x) => x.interest_vs_income_tax >= pk - 0.005);
+        const lo = top[0].label, hi = top[top.length - 1].label;
+        hist = " The record: about " + fx(pk * 100, 0) + "% in " + (lo === hi ? lo : lo + "–" + hi.slice(2)) + ".";
+      }
+      card("", "Interest on the debt", fx(r * 100, 1) + "%<small>of income taxes</small>",
+        "Interest is <b>" + usd(iRow.interest_per_taxpayer) + " per taxpayer</b>" + fn(iRow, ["returns_filed"]) + ", " + fx(r * 100, 1) + "% of income taxes (FY" + iRow.label + ")" +
+        (y21 && isNum(y21.interest_vs_income_tax) ? ", up from " + fx(y21.interest_vs_income_tax * 100, 0) + "% in 2021." : ".") + hist);
+    }
+    if (proj && proj.series && proj.series.Debt) {
+      const S = proj.series;
+      card("proj", "If 2026 follows " + proj.analog, "+" + tn(S.Debt.implied_increase_bn) + "<small>debt</small>",
+        "Repeat " + proj.analog + "–" + (+proj.analog + 2) + "'s growth from today's levels: implied added debt <b>+" + tn(S.Debt.implied_increase_bn) + "</b> (" + usd(S.Debt.per_taxpayer) + " per taxpayer)" +
+        (S.FedBalanceSheet ? ", Fed balance sheet <b>+" + tn(S.FedBalanceSheet.implied_increase_bn) + "</b>" : "") + (S.M2 ? ", M2 <b>+" + tn(S.M2.implied_increase_bn) + "</b>" : "") + ".",
+        "Historical arithmetic, not a forecast");
+    }
+    $("ptxFacts").innerHTML = cards.join("");
+  }
+  function dayName(iso) { const [y, m, d] = iso.split("-").map(Number); return MONTHS[m - 1] + " " + d + ", " + y; }
+  function updatePtxChart() {
+    if (!HAS_CHART) return;
+    const X = ptxData(), P = X.P, yearMode = ptxMode === "year", sfx = "_per_" + ptxBasis;
+    const rows = yearMode ? P.years.filter((r) => +r.label >= 2000) : (P.windows || []).filter((w) => !/cumulative/i.test(w.label));
+    const labels = rows.map((r) => yearMode ? (r.label === String(TARGET) ? r.label + " YTD" : r.label) : r.label.replace(/-/g, "–"));
+    const set = (base, label, color, hidden) => ({ label, data: rows.map((r) => isNum(r[base + sfx]) ? r[base + sfx] : null), backgroundColor: color, borderRadius: 4, hidden: !!hidden, maxBarThickness: 34 });
+    const ds = [set("income_tax", "Avg. federal income tax paid", WGRAY), set("m2_added", "New money (M2) created", SAGE),
+      set("fed_bs_change", "Fed balance-sheet change", TEAL), set("deficit", "Federal deficit", ROSE, true)].filter((d) => d.data.some(isNum));
+    const who = ptxBasis === "taxpayer" ? "per taxpayer" : "per taxable return";
+    const opts = {
+      interaction: { mode: "index", intersect: false },
+      scales: { x: { grid: { display: false }, ticks: { autoSkip: yearMode, maxRotation: 0 } },
+        y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => usdK(v) } } },
+      plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 12 } },
+        tooltip: { callbacks: { label: (it) => " " + it.dataset.label + ": " + usd(it.parsed.y) + " " + who } } },
+    };
+    if (charts.ptx) charts.ptx.destroy();
+    charts.ptx = new Chart($("ptxChart"), { type: "bar", data: { labels, datasets: ds }, options: opts });
+    $("ptxChartTitle").innerHTML = "Income tax paid vs. money created <span class='muted'>(US$ " + who + ")</span>";
+    const hot = P.years.filter((r) => isNum(r.m2_vs_income_tax) && r.m2_vs_income_tax > 1).map((r) => r.label);
+    const c = X.cum;
+    $("ptxChartNote").textContent = (yearMode
+      ? (hot.length ? "Years when more new M2 was created per taxpayer than the average taxpayer paid in federal income tax: " + hot.join(", ") + ". " : "") +
+        "Each year mixes calendars: M2 and the Fed balance sheet are December-to-December, income tax and the deficit are fiscal years, taxpayer counts are tax years. " + TARGET + " is year-to-date (M2 through Aug, Fed balance sheet through Sep) and uses carried-forward taxpayer counts and FY2025 budget figures. "
+      : "Stocks run from the December before each window to the December of its last year; budget flows are summed over the window's fiscal years; per taxpayer = total ÷ average returns filed in the window. " +
+        (c ? "Cumulative " + c.years.replace("-", "–") + ": " + usd(c.m2_added_per_taxpayer) + " of new M2 per taxpayer versus " + usd(c.income_tax_per_taxpayer) + " of income tax. " : "")) +
+      (ptxBasis === "taxable_return" ? "Taxable returns (returns that owed tax, about 70% of all) start in 1999; the Fed balance-sheet change per taxable return is only in the crisis windows. " : "") +
+      "Click a legend item to show or hide it (the deficit starts hidden).";
+  }
+  function updateCalc() {
+    const X = ptxData(), tax = +$("ptxTax").value;
+    document.querySelectorAll("#ptxPresets .chip").forEach((c) => c.classList.toggle("active", +c.dataset.v === tax));
+    if (!(tax > 0)) { $("ptxOut").innerHTML = "<p class='fine'>Enter an amount above $0.</p>"; return; }
+    const item = (cls, k, vhtml, sub) => "<div class='ptx-o " + cls + "'><div class='ptx-o-k'>" + k + "</div><div class='ptx-o-v'>" + vhtml + "</div><p class='ptx-o-sub'>" + sub + "</p></div>";
+    const d = X.lastWith("debt_per_taxpayer"), iRow = X.P.years.slice().reverse().find((r) => isNum(r.interest_per_taxpayer) && !(r.flags || []).some((f) => f.startsWith("interest_outlays_bn")));
+    const pj = X.proj && X.proj.series && X.proj.series.Debt;
+    let html = "";
+    if (d) html += item("debt", "Your share of the federal debt", yrs(d.debt_per_taxpayer / tax), usd(d.debt_per_taxpayer) + " per taxpayer (" + (d.label === String(TARGET) ? "Oct 2026" : d.label) + ") = that many years of your tax");
+    if (iRow) { const sh = iRow.interest_per_taxpayer / tax; html += item("", "Interest on your share, per year", "<span class='pct'>" + fx(sh * 100, 0) + "%</span><small>of your tax</small>", usd(iRow.interest_per_taxpayer) + " per taxpayer in FY" + iRow.label); }
+    if (X.covid) html += item("m2", "Money created in " + X.covid.years.replace("-", "–"), yrs(X.covid.m2_added_per_taxpayer / tax), usd(X.covid.m2_added_per_taxpayer) + " of new M2 per taxpayer");
+    if (pj) html += item("", "If 2026 follows " + X.proj.analog + ": added debt", yrs(pj.per_taxpayer / tax), usd(pj.per_taxpayer) + " per taxpayer over 24 months. Historical arithmetic, not a forecast");
+    $("ptxOut").innerHTML = html;
+  }
+  function renderGauge(X) {
+    const r = X.lastWith("years_tax_to_pay_debt");
+    if (!r) { $("ptxGaugeV").textContent = "–"; $("ptxGaugeText").textContent = "Not in the data yet."; return; }
+    const v = r.years_tax_to_pay_debt, max = Math.max(20, Math.ceil(v / 10) * 10 + 10), f = Math.min(1, v / max);
+    $("ptxGaugeMax").textContent = max; $("ptxGaugeMid").textContent = max / 2;
+    const first = (X.Y["1970"] && isNum(X.Y["1970"].years_tax_to_pay_debt)) ? X.Y["1970"] : X.P.years.find((x) => isNum(x.years_tax_to_pay_debt)), y08 = X.Y["2008"];
+    $("ptxGaugeV").innerHTML = fx(v, 1) + " years" + fn(r, ["debt", "indiv_income_tax_receipts_bn"]);
+    $("ptxGaugeText").innerHTML = "If every taxpayer handed over 100% of their federal income tax and the government spent nothing else, paying off today's debt would take about " + fx(v, 1) + " years." +
+      (first ? " In " + first.label + " it was " + fx(first.years_tax_to_pay_debt, 1) + (y08 && isNum(y08.years_tax_to_pay_debt) ? "; in 2008, " + fx(y08.years_tax_to_pay_debt, 1) : "") + "." : "");
+    whenVisible($("ptxNeedle"), () => {
+      $("ptxGaugeFill").style.strokeDashoffset = (283 * (1 - f)).toFixed(1);
+      $("ptxNeedle").style.transform = "rotate(" + (-90 + 180 * f).toFixed(1) + "deg)";
+    });
+  }
+  function renderHH(X) {
+    const hh = X.lastWith("debt_hh_to_median_income"), pj = X.proj && X.proj.series && X.proj.series.Debt, y90 = X.Y["1990"];
+    if (!hh) { $("ptxBars").innerHTML = ""; $("ptxHHNote").textContent = "Median household income isn't in the data yet."; return; }
+    const med = hh.median_household_income;
+    const items = [
+      { k: "Median household income" + fn(hh, ["median_hh_income_usd"]), v: med, c: WGRAY },
+      { k: "Federal debt per household" + fn(hh, ["debt", "households"]), v: hh.debt_per_household, c: ROSE },
+      pj && isNum(pj.per_household) && { k: "Added debt per household if 2026 follows " + X.proj.analog + " (arithmetic)", v: pj.per_household, c: SAND },
+      X.covid && isNum(X.covid.m2_added_per_household) && { k: "New money (M2) per household, " + X.covid.years.replace("-", "–"), v: X.covid.m2_added_per_household, c: SAGE },
+    ].filter(Boolean);
+    const max = Math.max(...items.map((i) => i.v));
+    $("ptxBars").innerHTML = items.map((i) => "<div><div class='ptx-bar-k'><span>" + i.k + "</span><b>" + usd(i.v) +
+      (i.v !== med ? " <span class='muted'>· " + fx(i.v / med, 1) + "×</span>" : "") +
+      "</b></div><div class='ptx-bar'><i style='background:" + i.c + "' data-w='" + (100 * i.v / max).toFixed(1) + "'></i></div></div>").join("");
+    whenVisible($("ptxBars"), () => requestAnimationFrame(() => $("ptxBars").querySelectorAll("i").forEach((n) => n.style.width = n.dataset.w + "%")));
+    $("ptxHHNote").textContent = "× = multiples of a year of median household income (Census). Debt per household = total public debt ÷ households." + (y90 && isNum(y90.debt_hh_to_median_income) ? " In 1990 the debt was " + fx(y90.debt_hh_to_median_income, 1) + "× median income." : "");
+  }
+  function startTicker(X) {
+    const c = X.clock, last = X.latest;
+    if (!c || !isNum(c.per_second) || !isNum(last.debt_total_bn)) { $("ptxTick").textContent = "–"; $("ptxTickSub").textContent = "Debt clock data not available."; return; }
+    const base = last.debt_total_bn * 1e9, t0 = new Date(c.to + "T23:59:59-04:00").getTime(), n = last.returns_filed;
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const draw = () => { const v = base + c.per_second * (Date.now() - t0) / 1000; $("ptxTick").textContent = "$" + fx(v, 0); if (isNum(n)) $("ptxTickPer").textContent = "$" + fx(v / n, 2); };
+    draw(); if (ptxTimer) clearInterval(ptxTimer); ptxTimer = setInterval(draw, reduce ? 1000 : 100);
+    $("ptxTickSub").innerHTML = "Estimate, not an official figure. Starts from Treasury's Debt to the Penny (" + tn(last.debt_total_bn, 2) + " on " + dayName(c.to) + ") and adds about $" + fx(c.per_second, 0) +
+      " a second, the average pace of the past 12 months (" + usd(c.per_taxpayer_per_day) + " per taxpayer per day" + fn(last, ["returns_filed"]) + ").";
+  }
+  // ------------------------------------------------------------ METHOD / FOOTER
+  function renderMeta() {
+    const latest = D.series.latest_by_series || {};
+    $("methodLatest").textContent = monthName(latest.Unemployment || D.series.dates[D.series.dates.length - 1]);
+    const A = D.analogs;
+    $("methodFeatures").textContent = (A.is_placeholder ? "Ranking shown is EXAMPLE data. " : "") + "Features used: " + D.annual.features.map((f) => (FEAT[f] || { label: f }).label).join(", ") + ". Weights: " +
+      (D.annual.weights_source.indexOf("analog_weights") >= 0 ? "from the scoring step (currently all equal)" : "equal (default)") + ".";
+    const b = D.series.built_at ? new Date(D.series.built_at) : null;
+    $("footBuilt").textContent = b ? "Data files built " + b.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }) + " CT." : "";
+  }
+
+  // ------------------------------------------------------------ boot
+  async function boot() {
+    try { D = await loadData(); } catch (e) { document.querySelector("main").insertAdjacentHTML("afterbegin", "<div class='noscript'>Could not load the data files. Run build_data.py, then serve this folder (python3 -m http.server).</div>"); return; }
+    D.series.dates.forEach((d, i) => (idx[d] = i));
+    recBands = (D.series.recessions || []).map(([a, b]) => [tOf(a), tOf(b) + 1 / 12]);
+    histRows = D.analogs.rows.filter((r) => r.historical_rank).sort((a, b) => a.historical_rank - b.historical_rank);
+    if (!HAS_CHART) document.querySelector("main").insertAdjacentHTML("afterbegin", "<div class='noscript'>The chart library didn't load (offline?). Numbers are shown; charts need an internet connection.</div>");
+    renderHero();
+    renderCallouts();
+    buildYearPicker();
+    buildMiniGrid();
+    selectYear(histRows[0] ? histRows[0].year : 2007);
+    renderSnapshot();
+    initBuilder();
+    renderMeta();
+    whenVisible($("rankChart"), renderRanking);
+    renderHistoryTabs();
+    whenVisible($("historyChart"), updateHistory);
+    renderMoney();
+    renderPress();
+    renderPerTaxpayer();
+    initQR();
+    document.querySelectorAll(".toggle[role=tablist] button[data-h]").forEach((b) => b.onclick = () => {
+      nextH = +b.dataset.h; document.querySelectorAll("button[data-h]").forEach((x) => { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b); }); renderNext(selectedYear);
+    });
+    window.__dashboardReady = true;
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+  // expose scorer for QA (console / tests)
+  window.__scoreBuilder = (vec) => scoreBuilder(vec);
+})();

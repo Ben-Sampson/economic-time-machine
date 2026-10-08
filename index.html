@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Economic Time Machine · Which past year does 2026 most resemble?</title>
+  <meta name="description" content="The Economic Time Machine: which past year does 2026 most resemble, and what happened next? A comparison of the U.S. economy with every year since 1950. Educational project, not financial advice.">
+  <meta name="theme-color" content="#16191c">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316191c'/%3E%3Ccircle cx='32' cy='32' r='20' stroke='%238fbc98' stroke-width='5' fill='none'/%3E%3Cpath d='M32 20 V32 L41 37' stroke='%23e7e9e6' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top" aria-label="The Economic Time Machine, back to top">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" class="b-ring"/><path d="M32 18 V32 L42 38" class="b-hand"/><path d="M8 20 A28 28 0 0 1 20 7" class="b-arrow"/><path d="M6 12 L8 21 L16 18" class="b-arrow"/></svg>
+        <span>The Economic Time Machine</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#machine">Time machine</a>
+        <a href="#build">Build your 2026</a>
+        <a href="#money">Money &amp; gold</a>
+        <a href="#ranking">Ranking</a>
+        <a href="#history">History</a>
+        <a href="#press">Printing press</a>
+        <a href="#method">Method</a>
+      </nav>
+      <span class="pill pill-warn hidden" id="navPlaceholder" title="Analog ranking is placeholder example data">Example data</span>
+      <button class="qr-btn" id="qrOpen" type="button" aria-label="Show QR code to open this site on a phone" title="Show QR code (or add ?present=1 to the URL)"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM5 5v3h3V5zM16 5v3h3V5zM5 16v3h3v-3zM14 14h3v3h-3zM18 18h3v3h-3zM18 14h3v2h-3zM14 18h2v3h-2z"/></svg></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 1. HERO -->
+    <section class="hero" id="top">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <svg class="hero-dial" viewBox="0 0 600 600" aria-hidden="true" focusable="false">
+        <circle cx="300" cy="300" r="270" class="d-ring"/>
+        <circle cx="300" cy="300" r="200" class="d-ring d-ring2"/>
+        <circle cx="300" cy="300" r="120" class="d-ring d-ring3"/>
+        <g class="d-ticks"><line x1="300" y1="30" x2="300" y2="58" transform="rotate(0 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(6 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(12 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(18 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(24 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(30 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(36 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(42 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(48 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(54 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(60 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(66 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(72 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(78 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(84 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(90 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(96 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(102 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(108 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(114 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(120 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(126 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(132 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(138 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(144 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(150 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(156 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(162 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(168 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(174 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(180 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(186 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(192 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(198 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(204 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(210 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(216 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(222 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(228 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(234 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(240 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(246 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(252 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(258 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(264 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(270 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(276 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(282 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(288 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(294 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(300 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(306 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(312 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(318 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(324 300 300)"/><line x1="300" y1="30" x2="300" y2="58" transform="rotate(330 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(336 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(342 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(348 300 300)"/><line x1="300" y1="42" x2="300" y2="58" transform="rotate(354 300 300)"/></g>
+        <g class="d-years"><text x="300" y="92" transform="rotate(0 300 300)">1950</text><text x="300" y="92" transform="rotate(45 300 300)">1960</text><text x="300" y="92" transform="rotate(90 300 300)">1970</text><text x="300" y="92" transform="rotate(135 300 300)">1980</text><text x="300" y="92" transform="rotate(180 300 300)">1990</text><text x="300" y="92" transform="rotate(225 300 300)">2000</text><text x="300" y="92" transform="rotate(270 300 300)">2010</text><text x="300" y="92" transform="rotate(315 300 300)">2020</text></g>
+        <g class="d-hand"><line x1="300" y1="300" x2="300" y2="110"/><circle cx="300" cy="300" r="6"/></g>
+      </svg>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">2026 vs every year since 1950</p>
+          <h1 class="site-title">The Economic <span class="hl-2026">Time Machine</span></h1>
+          <p class="subtitle">Which past year does 2026 most resemble, and what happened next?</p>
+          <p class="lede">We pitted 2026 against every year since 1950 on 13 measures: inflation, jobs, interest rates, the yield curve, stock valuations, oil, gold, the dollar, home prices and money growth. One year comes out on top. Then we checked what happened next.</p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#machine">Open the time machine</a>
+            <a class="btn btn-ghost" href="#method">How it works</a>
+          </div>
+          <p class="notice" role="note"><span class="notice-dot" aria-hidden="true"></span>Educational project, not financial advice. A comparison with history, not a forecast.</p>
+        </div>
+
+        <div class="answer-card" id="answerCard" aria-live="polite">
+          <div class="placeholder-banner hidden" id="placeholderBanner" role="note">
+            <strong>Example data.</strong> The analog ranking is still being computed. Years and scores here are placeholders, <em>not results</em>.
+          </div>
+          <p class="answer-kicker">2026 most resembles</p>
+          <div class="answer-main">
+            <div class="answer-year" id="heroYear">----</div>
+            <div class="ring" id="heroRing" style="--p:0">
+              <div class="ring-inner">
+                <span class="ring-num" id="heroScore">--</span>
+                <span class="ring-label">similarity<br>out of 100</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-next" id="heroNext"></div>
+          <p class="runners-title">Runners-up</p>
+          <ol class="runners" id="heroRunners"></ol>
+          <p class="sanity" id="heroSanity"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAST TIME CALLOUTS -->
+    <section class="section section-tight" id="lasttime" aria-label="Last time it looked like this">
+      <div class="wrap">
+        <div class="lasttime-head">
+          <h2 class="bold-h">Last time it looked like this&hellip;</h2>
+          <span class="pill pill-warn hidden" id="calloutsExample">Example data</span>
+        </div>
+        <div class="callouts" id="callouts"></div>
+        <p class="fine">History, not a forecast. "Matched" indicators are the ones where that year sat closest to 2026. S&amp;P figures are Robert Shiller's inflation-adjusted index, price only.</p>
+      </div>
+    </section>
+
+    <!-- 2. TIME MACHINE -->
+    <section class="section section-feature" id="machine">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">The time machine</p>
+          <h2>Put 2026 side by side with any year</h2>
+          <p class="section-sub">Pick a year. Each panel overlays 2026 (so far) on the year you picked, month by month. Then see what happened in the two years after it.</p>
+        </div>
+
+        <div class="machine-controls">
+          <div class="year-picker">
+            <button class="icon-btn" id="prevYear" aria-label="Previous year">&#8249;</button>
+            <label class="sr-only" for="yearSelect">Compare 2026 with</label>
+            <select id="yearSelect"></select>
+            <button class="icon-btn" id="nextYear" aria-label="Next year">&#8250;</button>
+          </div>
+          <div class="chips" id="analogChips" aria-label="Top analog years"></div>
+        </div>
+
+        <div class="legend-row">
+          <span class="legend"><i class="sw sw-2026"></i>2026 (Jan to latest)</span>
+          <span class="legend"><i class="sw sw-year"></i><span id="legendYear">----</span></span>
+          <span class="legend"><i class="sw sw-rec"></i>Recession months in <span id="legendYear2">----</span></span>
+        </div>
+
+        <div class="mini-grid" id="miniGrid"></div>
+
+        <!-- WHAT HAPPENED NEXT -->
+        <div class="next-panel" id="nextPanel">
+          <div class="next-head">
+            <div>
+              <p class="eyebrow">What happened next</p>
+              <h3 id="nextTitle">After ----</h3>
+              <p class="section-sub small" id="nextSub"></p>
+            </div>
+            <div class="toggle" role="tablist" aria-label="Horizon">
+              <button role="tab" class="active" data-h="12" aria-selected="true">12 months</button>
+              <button role="tab" data-h="24" aria-selected="false">24 months</button>
+            </div>
+          </div>
+          <div class="next-grid">
+            <div class="next-stats" id="nextStats"></div>
+            <div class="next-chart card">
+              <div class="card-title">The 24 months after December <span id="nextChartYear">----</span> <span class="muted">(%, rose bands = recession)</span></div>
+              <div class="chart-box chart-md"><canvas id="nextChart" aria-label="Unemployment, inflation, Fed funds and 10-year yield over the following 24 months"></canvas></div>
+            </div>
+          </div>
+          <div class="card next-table-card">
+            <div class="card-title">Across the top analog years <span class="muted">(from December of each year)</span></div>
+            <div class="table-scroll"><table class="next-table" id="nextTable"></table></div>
+            <p class="summary-line" id="nextSummary"></p>
+          </div>
+          <p class="fine">History, not a forecast. Past outcomes after similar-looking years varied widely and do not tell us what 2026 to 2028 will bring. S&amp;P figures use Robert Shiller's inflation-adjusted index (price only, dividends excluded).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUILD YOUR OWN 2026 -->
+    <section class="section section-feature" id="build">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Build your own 2026</p>
+          <h2>Drag the dials. Watch history answer.</h2>
+          <p class="section-sub">Every dial starts at 2026's actual year-to-date average. Move one and the closest years are recalculated instantly in your browser, using the same scoring as the main ranking.</p>
+        </div>
+        <div class="qr-card" id="qrCard">
+          <div class="qr-code" id="qrSmall" role="img" aria-label="QR code linking to this site"></div>
+          <div class="qr-copy">
+            <p class="qr-kicker">Grab your phone</p>
+            <p class="qr-title">Scan to build your own 2026</p>
+            <p class="qr-url" id="qrUrl"></p>
+            <button class="btn btn-ghost btn-sm" id="qrBig" type="button">Show it big</button>
+          </div>
+        </div>
+        <div class="presets" id="presets" aria-label="Scenario presets"></div>
+        <div class="builder">
+          <div class="builder-dials">
+            <div class="dials" id="dials"></div>
+            <details class="more-dials">
+              <summary>More dials <span class="muted">(stocks, gold, dollar, home prices, money growth, recession)</span></summary>
+              <div class="dials" id="dialsMore"></div>
+            </details>
+            <button class="btn btn-ghost btn-sm" id="resetAll" type="button">&#8634; Reset all to actual 2026</button>
+          </div>
+          <div class="builder-out" id="builderOut" aria-live="polite">
+            <p class="bo-kicker">Your 2026 most resembles</p>
+            <div class="bo-top" id="boTop"></div>
+            <ol class="bo-list" id="boList"></ol>
+            <p class="bo-mini" id="boMini"></p>
+            <div class="bo-callout" id="boCallout"></div>
+            <p class="fine" id="boNote"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SNAPSHOT -->
+    <section class="section" id="today">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Where we are today</p>
+          <h2>The 2026 snapshot</h2>
+          <p class="section-sub">Latest reading for each indicator, the month it's from, and how it changed from a year earlier.</p>
+        </div>
+        <div class="cards" id="snapshotCards"></div>
+      </div>
+    </section>
+
+    <!-- 4. RANKING -->
+    <section class="section" id="ranking">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">The leaderboard</p>
+          <h2>Closest years to 2026</h2>
+          <p class="section-sub">Similarity score from 0 to 100, where higher means closer to 2026. Tap a bar to load that year into the time machine.</p>
+        </div>
+        <div class="rank-grid">
+          <div class="card">
+            <div class="card-title" id="rankTitle">Top analog years</div>
+            <div class="chart-box chart-rank"><canvas id="rankChart" aria-label="Analog years ranked by similarity score"></canvas></div>
+          </div>
+          <div class="card" id="gapCard">
+            <div class="card-title">Why <span id="gapYear">----</span>? <span class="muted">Gap vs 2026, by indicator</span></div>
+            <div class="chart-box chart-rank"><canvas id="gapChart" aria-label="Per-indicator gap between 2026 and the selected year"></canvas></div>
+            <p class="fine">Bars show how far that year sat from 2026 on each indicator, in standard deviations ("z-scores"). Short bars mean a close match; a bar to the right means the year was higher than 2026.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MONEY PRINTING & HARD ASSETS -->
+    <section class="section" id="money">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Money printing &amp; hard assets</p>
+          <h2>When the money supply surges, where does it go?</h2>
+          <p class="section-sub">Growth in the money supply (M2) and the Fed's balance sheet, set against gold, oil and home prices. Everything is shown as change versus a year earlier, so they share one scale.</p>
+        </div>
+        <div class="money-coming card hidden" id="moneyComing">
+          <span class="pill pill-warn">Data coming</span>
+          <p>Money-supply and Fed-cycle data are still being prepared. This section fills in automatically once <code>build_data.py</code> finds them.</p>
+        </div>
+        <div id="moneyBody">
+          <div class="findings" id="findings"></div>
+          <div class="money-stats" id="moneyStats"></div>
+          <div class="history-controls">
+            <div class="chips chips-scroll" id="moneyToggles" aria-label="Series to show"></div>
+            <div class="toggle" id="moneyRange" aria-label="Time range">
+              <button data-from="1960">Since 1960</button>
+              <button class="active" data-from="2000">Since 2000</button>
+              <button data-from="2016">10 yrs</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Money growth vs hard assets <span class="muted">(% change vs a year earlier; rose bands = recessions)</span></div>
+            <div class="chart-box chart-lg"><canvas id="moneyChart" aria-label="M2 and Fed balance sheet growth against gold, oil and home-price growth"></canvas></div>
+          </div>
+
+          <div class="cycles card" id="cyclesCard">
+            <div class="cycles-head">
+              <div>
+                <p class="eyebrow">Fed-cycles explorer</p>
+                <h3>Pick a rate cycle. See what bonds, money and gold did.</h3>
+              </div>
+              <div class="toggle" id="cycleKind" role="tablist" aria-label="Cycle type">
+                <button class="active" data-kind="easing" role="tab" aria-selected="true">Easing (cuts)</button>
+                <button data-kind="hiking" role="tab" aria-selected="false">Hiking (raises)</button>
+              </div>
+            </div>
+            <div class="cycle-pick">
+              <label class="sr-only" for="cycleSelect">Cycle</label>
+              <select id="cycleSelect" class="select"></select>
+              <label class="check"><input type="checkbox" id="cycleShort"> include short legs (&lt; 6 months)</label>
+            </div>
+            <div class="cycle-grid">
+              <div class="cycle-stats" id="cycleStats"></div>
+              <div>
+                <div class="chart-box chart-md"><canvas id="cycleChart" aria-label="Fed funds, 10-year yield, M2 growth and gold through the selected cycle"></canvas></div>
+                <p class="fine" id="cycleNote"></p>
+              </div>
+            </div>
+          </div>
+          <p class="fine">Cycles use a 1-percentage-point turning-point rule on the effective Fed funds rate (see the method notes). Before the 1990s the Fed didn't announce a target, so a few short legs may be noise. Small samples, different eras: patterns, not predictions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. HISTORY -->
+    <section class="section" id="history">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">76 years of context</p>
+          <h2>The long view</h2>
+          <p class="section-sub">Each indicator since 1950. Rose-tinted bands are U.S. recessions. The highlighted bands mark 2026 and the year loaded in the time machine.</p>
+        </div>
+        <div class="history-controls">
+          <div class="chips chips-scroll" id="historyTabs" role="tablist" aria-label="Indicator"></div>
+          <div class="toggle" id="rangeToggle" aria-label="Time range">
+            <button class="active" data-from="1950">All</button>
+            <button data-from="1990">Since 1990</button>
+            <button data-from="2016">10 yrs</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span id="historyTitle">Indicator</span> <span class="muted" id="historyNote"></span></div>
+          <div class="chart-box chart-lg"><canvas id="historyChart" aria-label="Long-history line chart with recession shading"></canvas></div>
+          <p class="fine" id="historyExplain"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE PRINTING PRESS (closing section) -->
+    <section class="section press" id="press">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">The printing press</p>
+          <h2 class="press-h">In hard times, the money machine runs hot.</h2>
+          <p class="section-sub">Every number below comes straight from Federal Reserve and Treasury data. No adjectives needed.</p>
+        </div>
+        <div class="press-coming card hidden" id="pressComing"><span class="pill pill-warn">Data coming</span> <span class="muted">Money-supply levels not found yet.</span></div>
+        <div id="pressBody">
+          <div class="counters" id="counters"></div>
+          <div class="card press-chart-card">
+            <div class="press-chart-head">
+              <div class="card-title" id="pressChartTitle">Printing during crises</div>
+              <div class="toggle" id="pressMode" aria-label="Chart mode">
+                <button class="active" data-mode="level">Dollars</button>
+                <button data-mode="yoy">Yearly growth</button>
+              </div>
+            </div>
+            <div class="chart-box chart-lg"><canvas id="pressChart" aria-label="Fed balance sheet, M2, monetary base and federal debt over time with recessions shaded"></canvas></div>
+            <p class="fine">Rose-tinted bands are recessions. Fed balance sheet (WALCL) data start in Dec 2002; M2 and the monetary base in 1959; federal debt (quarterly) in 1966.</p>
+          </div>
+          <div class="proj card" id="proj">
+            <div class="proj-head">
+              <div>
+                <p class="eyebrow">Historical arithmetic, not a forecast</p>
+                <h3 id="projTitle">If 2026 follows 2007&hellip;</h3>
+              </div>
+              <div class="chips" id="projChips" aria-label="Analog year"></div>
+            </div>
+            <div class="proj-grid" id="projGrid"></div>
+            <p class="proj-formula" id="projFormula"><span class="info" tabindex="0" aria-describedby="projFormulaTip">&#9432; How is this calculated?<span class="tip" role="tooltip" id="projFormulaTip"></span></span></p>
+            <p class="fine" id="projNote"></p>
+          </div>
+
+          <!-- WHAT IT MEANS PER TAXPAYER -->
+          <div class="ptx" id="ptx">
+            <div class="ptx-head">
+              <p class="eyebrow">What it means per taxpayer</p>
+              <h3 class="ptx-h">Your taxes vs. the money machine</h3>
+              <p class="section-sub">Trillions are hard to picture. Divided by the number of taxpayers, they aren't. A "taxpayer" here is one individual income-tax return filed (IRS); a married couple filing jointly counts once. <span id="ptxBadge"></span></p>
+            </div>
+            <div class="ptx-facts" id="ptxFacts"></div>
+            <div class="card ptx-chart-card">
+              <div class="press-chart-head">
+                <div class="card-title" id="ptxChartTitle">Income tax paid vs. money created, per taxpayer</div>
+                <div class="ptx-toggles">
+                  <div class="toggle" id="ptxMode" aria-label="Years or crisis windows">
+                    <button class="active" data-mode="year" type="button">By year</button>
+                    <button data-mode="window" type="button">Crisis windows</button>
+                  </div>
+                  <div class="toggle" id="ptxBasis" aria-label="Which taxpayers to count">
+                    <button class="active" data-basis="taxpayer" type="button" title="Every individual income-tax return filed">All returns</button>
+                    <button data-basis="taxable_return" type="button" title="Only returns that owed income tax (from 1999)">Taxable only</button>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-box chart-lg"><canvas id="ptxChart" aria-label="Average federal income tax per taxpayer next to new money created per taxpayer"></canvas></div>
+              <p class="fine" id="ptxChartNote"></p>
+            </div>
+            <div class="ptx-grid">
+              <div class="card ptx-calc">
+                <div class="card-title">Your share calculator</div>
+                <label class="ptx-label" for="ptxTax">My federal income tax for a year</label>
+                <div class="ptx-input"><span>$</span><input id="ptxTax" type="number" inputmode="numeric" min="100" step="100" value="10000" aria-describedby="ptxPresetsLabel"></div>
+                <p class="fine" id="ptxPresetsLabel">Or pick one:</p>
+                <div class="chips" id="ptxPresets"></div>
+                <div class="ptx-out" id="ptxOut" aria-live="polite"></div>
+              </div>
+              <div class="card ptx-gauge-card">
+                <div class="card-title">The debt, in years of taxes</div>
+                <svg class="ptx-gauge" viewBox="0 0 220 128" role="img" aria-labelledby="ptxGaugeText">
+                  <path class="g-track" d="M20 110 A90 90 0 0 1 200 110"/>
+                  <path class="g-fill" id="ptxGaugeFill" d="M20 110 A90 90 0 0 1 200 110"/>
+                  <line class="g-needle" id="ptxNeedle" x1="110" y1="110" x2="110" y2="34"/>
+                  <circle class="g-hub" cx="110" cy="110" r="6"/>
+                  <text class="g-tick" x="16" y="126">0</text><text class="g-tick" x="104" y="14" id="ptxGaugeMid">15</text><text class="g-tick" x="192" y="126" id="ptxGaugeMax">30</text>
+                </svg>
+                <div class="ptx-gauge-v" id="ptxGaugeV">–</div>
+                <p class="ptx-gauge-sub" id="ptxGaugeText"></p>
+              </div>
+              <div class="card ptx-hh">
+                <div class="card-title">Per household vs. a typical household income</div>
+                <div class="ptx-bars" id="ptxBars"></div>
+                <p class="fine" id="ptxHHNote"></p>
+              </div>
+              <div class="card ptx-tick">
+                <div class="card-title">The debt clock <span class="pill pill-est">Estimate</span></div>
+                <div class="ptx-tick-v" id="ptxTick" aria-live="off">–</div>
+                <div class="ptx-tick-2"><b id="ptxTickPer">–</b> per taxpayer</div>
+                <p class="ptx-tick-sub" id="ptxTickSub"></p>
+              </div>
+            </div>
+            <div class="ptx-notes-wrap"><p class="ptx-notes-h">Notes</p><ol class="ptx-notes" id="ptxNotes"></ol></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. HOW IT WORKS -->
+    <section class="section" id="method">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">How it works</p>
+          <h2>The method, in plain English</h2>
+        </div>
+        <ol class="steps">
+          <li><span class="step-n">1</span><h3>Gather the numbers</h3><p>Monthly U.S. data from 1950 to today, mostly via the Federal Reserve Bank of St. Louis (FRED), plus Robert Shiller's stock data and World Bank gold prices. Each year becomes one row of 13 annual averages.</p></li>
+          <li><span class="step-n">2</span><h3>Put them on one scale</h3><p>A 1-point move in unemployment and a $1 move in oil aren't comparable, so each indicator is converted to a "z-score": how many standard deviations it is from its long-run average.</p></li>
+          <li><span class="step-n">3</span><h3>Measure the distance</h3><p>For every year from 1950 to 2025 we combine how far each indicator is from 2026's level (a weighted "straight-line" distance, equal weights). Smaller distance means a closer match.</p></li>
+          <li><span class="step-n">4</span><h3>Score and rank</h3><p>Distances become a 0 to 100 similarity score (100 = identical, 0 = the farthest year). 2024 and 2025 are left out of the headline: they're neighbors, and their "what happened next" hasn't happened yet.</p></li>
+        </ol>
+        <div class="method-notes card">
+          <p><strong>Per-taxpayer numbers.</strong> A "taxpayer" is one individual income-tax return filed for that tax year (IRS Statistics of Income); "taxable only" counts returns that owed tax (from 1999). Average income tax = federal individual income-tax receipts for the fiscal year ÷ returns filed. New money = M2 in December minus M2 a year earlier; the Fed figure is the change in its total assets. Debt per taxpayer uses total public debt. Each year mixes calendars (December stocks, fiscal-year budgets, tax-year counts), so these are scale comparisons, not accounting identities. Values not yet published are carried forward from the latest year and footnoted. The debt clock extrapolates the last 12 months' pace from Treasury's Debt to the Penny and is an estimate.</p>
+          <p><strong>Limits worth knowing.</strong> Some series start later than 1950 (money growth and gold in 1960, the dollar in 1973, the yield curve in 1976, home prices in 1987), so early years are compared on fewer indicators. 2026 is a partial year (data through <span id="methodLatest">the latest month</span>). Similar numbers don't mean similar causes, and no two eras are truly alike.</p>
+          <p><strong>"If 2026 follows&hellip;" arithmetic.</strong> For an analog year Y we take the growth from December Y to December Y+2 in M2, the Fed balance sheet and the monetary base, and apply it to today's level: <em>implied added dollars = today's level &times; (level in Dec Y+2 &divide; level in Dec Y &minus; 1)</em>. It's what history would imply if the next two years repeated that era. It is historical arithmetic, not a forecast. The Fed balance sheet series (WALCL) starts in Dec 2002, so for earlier analog years only M2 and the monetary base are used.</p>
+          <p class="muted small" id="methodFeatures"></p>
+        </div>
+
+        <aside class="agents" aria-label="Built by AI agents">
+          <div class="agents-head">
+            <span class="agents-badge">Built by AI agents</span>
+            <a class="agents-link" href="build-log.html">Read the build log &rarr;</a>
+          </div>
+          <ul class="agents-list">
+            <li><span class="av av-g">G</span><span><strong>Gwok</strong> · builder agent: data pipeline, scoring, this website</span></li>
+            <li><span class="av av-pm">PM</span><span><strong>Macro Analogs PM</strong> · project lead agent: plan, QA, legal checklist</span></li>
+            <li><span class="av av-gr">Gr</span><span><strong>Grok</strong> · brainstorming and early planning</span></li>
+            <li><span class="av av-h">H</span><span><strong>Hunter</strong> · the human: decisions, review, presenting</span></li>
+          </ul>
+          <p class="muted small">Gwok and Macro Analogs PM run in Grok Bot and coordinate through a shared computer and a shared build log.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- QR present overlay -->
+  <div class="qr-overlay hidden" id="qrOverlay" role="dialog" aria-modal="true" aria-label="Scan to open the site">
+    <div class="qr-overlay-inner">
+      <p class="qr-overlay-title">Scan to try The Economic Time Machine</p>
+      <div class="qr-code qr-code-big" id="qrLarge"></div>
+      <p class="qr-url qr-url-big" id="qrUrlBig"></p>
+      <p class="muted small">Press Esc or tap anywhere to close · open with <code>?present=1</code> to start here</p>
+    </div>
+  </div>
+
+  <!-- 7. FOOTER -->
+  <footer class="footer">
+    <div class="wrap">
+      <p class="notice notice-foot" role="note"><span class="notice-dot" aria-hidden="true"></span>Educational project, not financial advice. A law-school class project comparing 2026 with history; nothing here is a forecast or a recommendation.</p>
+      <div class="footer-grid">
+        <div>
+          <p class="brand-foot">The Economic Time Machine</p>
+          <p class="muted small">For educational use. Not investment, legal or financial advice. Some series are copyrighted by their owners; we link to the original sources and don't claim their endorsement. Data retrieved Oct 8, 2026.</p>
+          <p class="muted small" id="footBuilt"></p>
+        </div>
+        <div class="credits">
+          <p class="foot-h">Data &amp; licensing</p>
+          <ul class="foot-list">
+            <li><strong>FRED, Federal Reserve Bank of St. Louis.</strong> Public-domain series, cited as requested: CPI and unemployment (U.S. Bureau of Labor Statistics; <a href="https://fred.stlouisfed.org/series/CPIAUCSL" target="_blank" rel="noopener">CPIAUCSL</a>, <a href="https://fred.stlouisfed.org/series/UNRATE" target="_blank" rel="noopener">UNRATE</a>); Fed funds, 10-year yield, broad dollar and M2 (Board of Governors of the Federal Reserve System; <a href="https://fred.stlouisfed.org/series/FEDFUNDS" target="_blank" rel="noopener">FEDFUNDS</a>, <a href="https://fred.stlouisfed.org/series/GS10" target="_blank" rel="noopener">GS10</a>, <a href="https://fred.stlouisfed.org/series/TWEXBGSMTH" target="_blank" rel="noopener">TWEXBGSMTH</a>, <a href="https://fred.stlouisfed.org/series/M2SL" target="_blank" rel="noopener">M2SL</a>, monetary base <a href="https://fred.stlouisfed.org/series/BOGMBASE" target="_blank" rel="noopener">BOGMBASE</a>, Fed balance sheet <a href="https://fred.stlouisfed.org/series/WALCL" target="_blank" rel="noopener">WALCL</a>, monthly averages of weekly data); federal debt (U.S. Department of the Treasury, Fiscal Service; <a href="https://fred.stlouisfed.org/series/GFDEBTN" target="_blank" rel="noopener">GFDEBTN</a>, quarterly). Retrieved from FRED.</li>
+            <li><strong>FRED, citation required:</strong> 10Y&minus;2Y spread, Federal Reserve Bank of St. Louis (<a href="https://fred.stlouisfed.org/series/T10Y2Y" target="_blank" rel="noopener">T10Y2Y</a>, monthly averages, charts only); WTI oil (<a href="https://fred.stlouisfed.org/series/WTISPLC" target="_blank" rel="noopener">WTISPLC</a>, shown as yearly % change; pre-2013 &copy; Dow Jones &amp; Company, from Aug 2013 U.S. Energy Information Administration); recession dates, Federal Reserve Bank of St. Louis based on NBER (<a href="https://fred.stlouisfed.org/series/USREC" target="_blank" rel="noopener">USREC</a>).</li>
+            <li><strong>Per-taxpayer figures</strong> (public domain, cited as requested): taxpayer counts from the <a href="https://www.irs.gov/statistics/soi-tax-stats-individual-time-series-statistical-tables" target="_blank" rel="noopener">IRS, Statistics of Income</a> (individual returns filed; taxable returns); individual income-tax receipts from <a href="https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/" target="_blank" rel="noopener">OMB Historical Tables, Table 2.1</a>; receipts, deficit and interest from OMB via FRED (<a href="https://fred.stlouisfed.org/series/FYFSD" target="_blank" rel="noopener">FYFSD</a>, <a href="https://fred.stlouisfed.org/series/FYOINT" target="_blank" rel="noopener">FYOINT</a>, <a href="https://fred.stlouisfed.org/series/FYFR" target="_blank" rel="noopener">FYFR</a>); households and median household income from the U.S. Census Bureau via FRED (<a href="https://fred.stlouisfed.org/series/TTLHH" target="_blank" rel="noopener">TTLHH</a>, <a href="https://fred.stlouisfed.org/series/MEHOINUSA646N" target="_blank" rel="noopener">MEHOINUSA646N</a>); population from BEA via FRED (<a href="https://fred.stlouisfed.org/series/POPTHM" target="_blank" rel="noopener">POPTHM</a>); latest daily debt from U.S. Treasury, Fiscal Data, <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener">Debt to the Penny</a> (Oct 6, 2026). No agency endorses this project.</li>
+            <li><strong>World Bank</strong> Commodity Price Data (The Pink Sheet), monthly gold price, <a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener">worldbank.org</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (<a href="https://datacatalog.worldbank.org/search/dataset/0038238/commodity-prices-history-and-projections" target="_blank" rel="noopener">catalog entry</a>). Used as published; shown as monthly price and yearly % change.</li>
+            <li><strong>Robert J. Shiller</strong>, <em>Irrational Exuberance</em> data (<a href="https://shillerdata.com/" target="_blank" rel="noopener">shillerdata.com</a>): CAPE (annual averages only) and real S&amp;P 500 (12- and 24-month % changes only). The S&amp;P 500 is a product of <a href="https://www.spglobal.com/spdji/" target="_blank" rel="noopener">S&amp;P Dow Jones Indices LLC</a>.</li>
+            <li><strong>S&amp;P CoreLogic Case-Shiller U.S. National Home Price Index</strong>, &copy; S&amp;P Dow Jones Indices LLC, via FRED (<a href="https://fred.stlouisfed.org/series/CSUSHPISA" target="_blank" rel="noopener">CSUSHPISA</a>): shown only as yearly % change. Index levels are not published here.</li>
+          </ul>
+          <p class="muted small">This site offers no data downloads; follow the links above to get the original series from their publishers. Restricted series (Shiller S&amp;P 500 and CAPE, Case-Shiller, pre-2013 WTI) appear only as % changes, annual values, ranks or scores. Full licensing notes are kept with the project files (<code>docs/data_licenses.md</code>) and are available on request.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <noscript><div class="noscript">This dashboard needs JavaScript to draw its charts.</div></noscript>
+</body>
+</html>
