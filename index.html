@@ -136,23 +136,25 @@
               <p class="section-sub small" id="nextSub"></p>
             </div>
             <div class="toggle" role="tablist" aria-label="Horizon">
-              <button role="tab" class="active" data-h="12" aria-selected="true">12 months</button>
-              <button role="tab" data-h="24" aria-selected="false">24 months</button>
+              <button role="tab" class="active" data-h="12" aria-selected="true">1 year after</button>
+              <button role="tab" data-h="24" aria-selected="false">2 years after</button>
+              <button role="tab" data-h="120" aria-selected="false">Decade after</button>
             </div>
           </div>
-          <div class="next-grid">
-            <div class="next-stats" id="nextStats"></div>
-            <div class="next-chart card">
-              <div class="card-title">The 24 months after December <span id="nextChartYear">----</span> <span class="muted">(%, rose bands = recession)</span></div>
-              <div class="chart-box chart-md"><canvas id="nextChart" aria-label="Unemployment, inflation, Fed funds and 10-year yield over the following 24 months"></canvas></div>
-            </div>
+          <p class="hz-tag"><span>Historical arithmetic, not a forecast</span><span>Not financial advice</span></p>
+          <div class="hz-callouts" id="hzCallouts" aria-live="polite"></div>
+          <div class="next-chart card">
+            <div class="card-title" id="nextChartTitle">The 24 months after December ----</div>
+            <p class="fine hz-axis" id="nextChartAxis"></p>
+            <div class="chart-box chart-md chart-next"><canvas id="nextChart" aria-label="Gold, M2, unemployment, inflation and interest rates after the selected year"></canvas></div>
           </div>
+          <div class="next-stats hz-stats" id="nextStats"></div>
           <div class="card next-table-card">
-            <div class="card-title">Across the top analog years <span class="muted">(from December of each year)</span></div>
+            <div class="card-title" id="nextTableTitle">Across the top analog years</div>
             <div class="table-scroll"><table class="next-table" id="nextTable"></table></div>
             <p class="summary-line" id="nextSummary"></p>
           </div>
-          <p class="fine">History, not a forecast. Past outcomes after similar-looking years varied widely and do not tell us what 2026 to 2028 will bring. S&amp;P figures use Robert Shiller's inflation-adjusted index (price only, dividends excluded).</p>
+          <p class="fine" id="nextFine">Historical arithmetic, not a forecast: these are what the numbers did after similar-looking years, and outcomes varied widely. Not financial advice. 1950 onward: December of the selected year to December 12, 24 or 120 months later (monthly averages). Before 1950: annual averages, year to year. S&amp;P 500 = Robert Shiller&rsquo;s data (price only, dividends excluded), shown only as % changes, so the chart marks it at +12, +24 and +120 months instead of drawing a path. Gold = World Bank Pink Sheet monthly price from 1960 (CC BY 4.0), official U.S. price before. M2 = Federal Reserve H.6 via FRED (M2SL) from 1959; Census <em>Historical Statistics</em> Series X 415 (annual) for 1903&ndash;1958. The two M2 series use different definitions, so changes that cross 1958&ndash;59 are not computed.</p>
         </div>
       </div>
     </section>
@@ -573,6 +575,7 @@
           <p><strong>Per-taxpayer numbers.</strong> A "taxpayer" is one individual income-tax return filed for that tax year (IRS Statistics of Income); "taxable only" counts returns that owed tax (from 1999). Average income tax = federal individual income-tax receipts for the fiscal year ÷ returns filed. New money = M2 in December minus M2 a year earlier; the Fed figure is the change in its total assets. Debt per taxpayer uses total public debt. Each year mixes calendars (December stocks, fiscal-year budgets, tax-year counts), so these are scale comparisons, not accounting identities. Values not yet published are carried forward from the latest year and footnoted. The debt clock extrapolates the last 12 months' pace from Treasury's Debt to the Penny and is an estimate.</p>
           <p><strong>Limits worth knowing.</strong> Some series start later than 1950 (money growth and gold in 1960, the dollar in 1973, the yield curve in 1976, home prices in 1987), so early years are compared on fewer indicators. 2026 is a partial year (data through <span id="methodLatest">the latest month</span>). Similar numbers don't mean similar causes, and no two eras are truly alike.</p>
           <p><strong>"If 2026 follows&hellip;" arithmetic.</strong> For an analog year Y we take the growth from December Y to December Y+2 in M2, the Fed balance sheet and the monetary base, and apply it to today's level: <em>implied added dollars = today's level &times; (level in Dec Y+2 &divide; level in Dec Y &minus; 1)</em>. It's what history would imply if the next two years repeated that era. It is historical arithmetic, not a forecast. The Fed balance sheet series (WALCL) starts in Dec 2002, so for earlier analog years only M2 and the monetary base are used.</p>
+          <p><strong>&ldquo;What happened next&rdquo; horizons.</strong> For a selected year Y (1950 on) we compare December Y with December 12, 24 and 120 months later: M2 (FRED M2SL), gold (World Bank Pink Sheet monthly average from 1960, the official $35 price before) and the S&amp;P 500 (Shiller, nominal and inflation-adjusted, price only). For years before 1950 the same horizons use annual averages (Y to Y+1, Y+2, Y+10), with M2 from Census <em>Historical Statistics</em> Series X 415 (1903&ndash;1958). The two M2 series use different definitions, so no change is computed across 1958&ndash;59, and a horizon that hasn&rsquo;t finished yet says so. The S&amp;P 500 appears only as % changes, never as a rebased path. Historical arithmetic, not a forecast.</p>
           <p class="muted small" id="methodFeatures"></p>
         </div>
 

@@ -315,6 +315,7 @@
 
   function selectYear(y, scroll) {
     selectedYear = y;
+    if (!$("yearSelect").querySelector("option[value='" + y + "']")) { const o = el("option", "", String(y)); o.value = y; o.dataset.extra = "1"; $("yearSelect").appendChild(o); }
     $("yearSelect").value = y;
     $("legendYear").textContent = y; $("legendYear2").textContent = y;
     document.querySelectorAll("#analogChips .chip").forEach((c) => c.classList.toggle("active", +c.dataset.year === y));
@@ -328,84 +329,217 @@
 
   // ------------------------------------------------------------ WHAT HAPPENED NEXT
   function stat(k, v, d) { return "<div class='stat'><div class='stat-k'>" + k + "</div><div class='stat-v " + (v.cls || "") + "'>" + v.txt + "</div><div class='stat-d'>" + (d || "") + "</div></div>"; }
-  function renderNext(y) {
-    const w = nextRow(y), h = nextH;
-    $("nextTitle").textContent = "After " + y + ", what happened next?";
-    $("nextChartYear").textContent = y;
-    const box = $("nextStats");
-    const known = w && isNum(w["sp_real_" + h + "m"]);
-    if (!w || (!known && !isNum(w["unemployment_" + h + "m"]))) {
-      $("nextSub").textContent = "";
-      box.innerHTML = "<div class='stat stat-wide'><div><div class='stat-k'>Not known yet</div><div class='stat-d'>The " + h + " months after December " + y + " haven't finished. That's why recent years are left out of the headline.</div></div></div>";
-    } else {
-      const base = w.base_month || y + "-12";
-      $("nextSub").textContent = "From " + monthName(base) + " to " + monthName((+base.slice(0, 4) + h / 12) + base.slice(4)) + ". Changes are in percentage points (pts) unless marked %.";
-      const p = (key, dec, unit) => ({ txt: signed(w[key + "_" + h + "m"], dec, unit), cls: cls(w[key + "_" + h + "m"]) });
-      box.innerHTML =
-        stat("Real S&amp;P 500", p("sp_real", 1, "%"), "inflation-adjusted, price only") +
-        stat("Unemployment", p("unemployment", 1, " pts"), "change in the jobless rate") +
-        stat("Inflation", p("inflation", 1, " pts"), "change in 12-month CPI inflation") +
-        stat("Fed funds rate", p("fed_funds", 2, " pts"), "change in the Fed's rate") +
-        stat("10-year yield", p("yield_10y", 2, " pts"), "change in long-term rates") +
-        stat("Gold", p("gold", 0, "%"), "price change") +
-        "<div class='stat stat-wide'><div class='stat-k'>Recession within " + h + " months?</div>" + recessionBadge(w, h).replace(/ within \d+ months/, "") + "</div>";
-      if (w.recession_start && ((h === 12 && w.recession_12m) || (h === 24 && w.recession_24m))) {
-        box.lastChild.insertAdjacentHTML("beforeend", "");
-        box.lastChild.querySelector(".stat-k").insertAdjacentHTML("afterend", "<span class='stat-d'>began " + monthName(w.recession_start) + "</span>");
-      }
-    }
-    if (HAS_CHART) {
-      // public-domain monthly series over the 24 months after December Y
-      const t0 = y + 11 / 12;
-      const line = (key, label, color, dash) => ({
-        label, borderColor: color, backgroundColor: color, borderWidth: 2.25, borderDash: dash || [], pointRadius: 0, tension: 0.25,
-        data: Array.from({ length: 25 }, (_, k) => { const ym = (y + Math.floor((11 + k) / 12)) + "-" + String(((11 + k) % 12) + 1).padStart(2, "0"); const v = val(key, ym); return isNum(v) ? { x: k, y: v } : null; }).filter(Boolean),
-      });
-      const ds = [line("Unemployment", "Unemployment", SAGE), line("Inflation_12m", "Inflation", SAND), line("FedFunds", "Fed funds", TEAL), line("Yield_10Y", "10-year yield", WGRAY, [5, 4])];
-      const bands = recBands.filter(([s, e]) => e > t0 && s < t0 + 2).map(([s, e]) => [Math.max(0, (s - t0) * 12), Math.min(24, (e - t0) * 12)]);
-      if (!charts.next) {
-        charts.next = new Chart($("nextChart"), {
-          type: "line", data: { datasets: ds },
-          options: {
-            parsing: false, interaction: { mode: "index", intersect: false },
-            scales: {
-              x: { type: "linear", min: 0, max: 24, grid: { display: false }, ticks: { stepSize: 6, callback: (v) => v === 0 ? "Dec " + selectedYear : "+" + v + " mo" } },
-              y: { grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)" }, ticks: { maxTicksLimit: 6, callback: axisPct } },
-            },
-            plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } }, bands: { bands },
-              tooltip: { callbacks: { title: (it) => (it[0].parsed.x === 0 ? "Dec " + selectedYear : "+" + it[0].parsed.x + " months"), label: (it) => " " + it.dataset.label + ": " + fx(it.parsed.y, 2) + "%" } } },
-          },
-        });
+  // horizons: % changes in M2, gold and the S&P 500 at +12/+24/+120 months (data/what_next_horizons.csv)
+  const HZ_LABEL = { 12: "1 year after", 24: "2 years after", 120: "Decade after" };
+  const hzYear = (y) => (((D.whatNext || {}).horizons || {}).years || {})[String(y)] || null;
+  const hzCell = (y, h) => { const z = hzYear(y); return z && z.h ? z.h[String(h)] || null : null; };
+  const addMonths = (ym, k) => { const t = +ym.slice(0, 4) * 12 + (+ym.slice(5, 7) - 1) + k; return Math.floor(t / 12) + "-" + String((t % 12) + 1).padStart(2, "0"); };
+  const fmtBn = (v) => !isNum(v) ? "–" : v >= 1000 ? "$" + fx(v / 1000, 2) + "T" : "$" + fx(v, v < 100 ? 1 : 0) + "B";
+  const fmtOz = (v) => !isNum(v) ? "–" : "$" + fx(v, v < 100 ? 2 : 0) + "/oz";
+  const longYear = (y) => (((D.longAnnual || {}).years) || []).find((r) => +r.year === y) || null;
+  function hzPeriod(z, e) {
+    if (!z || !e) return "";
+    return z.basis === "monthly" ? monthName(z.base) + " → " + monthName(e.end) : z.base + " avg → " + e.end + " avg";
+  }
+  function hzCard(kind, label, color, big, from, sub) {
+    return "<div class='hz' style='--hzc:" + color + "'><div class='hz-k'>" + label + "</div>" + big +
+      (from ? "<div class='hz-from'>" + from + "</div>" : "") + "<div class='hz-sub'>" + (sub || "") + "</div></div>";
+  }
+  function hzBig(c) { return "<div class='hz-v " + cls(c.pct) + "'>" + signed(c.pct, 1, "%") + "</div>"; }
+  function hzMissing(c, e, z) {
+    if (!c || c.status === "pending") return ["<div class='hz-v na'>Not known yet</div>", (e ? (z.basis === "monthly" ? monthName(e.end) : e.end) : "That date") + " hasn't happened yet."];
+    if (c.status === "break") return ["<div class='hz-v na'>Not comparable</div>", c.note ? cap(c.note) + "." : ""];
+    if (c.status === "no_data") return ["<div class='hz-v na'>No data</div>", c.note ? cap(c.note) + "." : ""];
+    return ["<div class='hz-v na'>–</div>", ""];
+  }
+  function renderHzCallouts(y, h) {
+    const z = hzYear(y), e = hzCell(y, h), box = $("hzCallouts");
+    if (!z || !e) { box.innerHTML = "<div class='hz' style='grid-column:1/-1'><div class='hz-k'>Not available</div><div class='hz-sub'>No horizon data for " + y + ".</div></div>"; return; }
+    const per = hzPeriod(z, e);
+    // M2
+    let m2;
+    if (e.m2.status === "ok") {
+      m2 = hzCard("m2", "Money supply (M2)", SLATE, hzBig(e.m2), fmtBn(e.m2.from_bn) + " → " + fmtBn(e.m2.to_bn),
+        per + (e.m2.basis === "annual" && z.basis === "monthly" ? "<br>" + cap(e.m2.note) + "." : e.m2.note && z.basis === "annual" ? "<br>Census HSUS X 415, annual." : ""));
+    } else { const [b, s] = hzMissing(e.m2, e, z); m2 = hzCard("m2", "Money supply (M2)", SLATE, b, "", s); }
+    // gold
+    let gold;
+    if (e.gold.status === "ok") {
+      gold = hzCard("gold", "Gold price", SAND, hzBig(e.gold), fmtOz(e.gold.from) + " → " + fmtOz(e.gold.to),
+        per + (e.gold.note ? "<br>" + cap(e.gold.note) + "." : ""));
+    } else { const [b, s] = hzMissing(e.gold, e, z); gold = hzCard("gold", "Gold price", SAND, b, "", s); }
+    // S&P
+    let sp;
+    if (e.sp_nom.status === "ok") {
+      sp = hzCard("sp", "S&amp;P 500", SAGE, hzBig(e.sp_nom), "",
+        per + " · nominal<br>After inflation: <b class='" + cls(e.sp_real.pct) + "'>" + signed(e.sp_real.pct, 1, "%") + "</b> · price only, % change only (Shiller data)");
+    } else { const [b, s] = hzMissing(e.sp_nom, e, z); sp = hzCard("sp", "S&amp;P 500", SAGE, b, "", s); }
+    box.innerHTML = m2 + gold + sp;
+  }
+  function hzStats(y, h) {
+    const z = hzYear(y), e = hzCell(y, h), box = $("nextStats");
+    const span = h / 12;
+    const items = [];
+    if (z && z.basis === "monthly") {
+      const base = z.base, end = e ? e.end : addMonths(base, h);
+      const d = (key) => { const a = val(key, base), b = val(key, end); return isNum(a) && isNum(b) ? b - a : null; };
+      const pp = (v, dec) => ({ txt: signed(v, dec, " pts"), cls: "" });
+      items.push(stat("Unemployment", pp(d("Unemployment"), 1), "change in the jobless rate"));
+      items.push(stat("Inflation", pp(d("Inflation_12m"), 1), "change in 12-month CPI inflation"));
+      items.push(stat("Fed funds rate", pp(d("FedFunds"), 2), "change in the Fed's rate"));
+      items.push(stat("10-year yield", pp(d("Yield_10Y"), 2), "change in long-term rates"));
+      if (h === 120) {
+        const recs = (D.series.recessions || []).filter(([a]) => a > base && a <= end);
+        const known = end <= D.series.dates[D.series.dates.length - 1];
+        items.push(stat("Recessions that began", { txt: known ? String(recs.length) : "–" }, recs.length ? recs.map(([a]) => monthName(a)).join(", ") : known ? "none in the decade" : "decade not finished"));
       } else {
-        charts.next.data.datasets = ds;
-        charts.next.options.plugins.bands.bands = bands;
-        charts.next.update();
+        const w = nextRow(y) || {};
+        const v = h === 12 ? w.recession_12m : w.recession_24m;
+        items.push(stat("Recession within " + h + " mo", { txt: v === true ? "Yes" : v === false ? "No" : "–" }, v === true && w.recession_start ? "began " + monthName(w.recession_start) : ""));
       }
+    } else if (z) {
+      const a = longYear(y), b = longYear(y + span);
+      const d = (k) => a && b && isNum(a[k]) && isNum(b[k]) ? b[k] - a[k] : null;
+      const pp = (v, dec) => ({ txt: signed(v, dec, " pts"), cls: "" });
+      items.push(stat("Unemployment", pp(d("unemployment"), 1), "annual average" + (a && a.unemployment_is_estimate ? " (HSUS estimate)" : "")));
+      items.push(stat("Inflation", pp(d("inflation"), 1), "annual CPI inflation"));
+      items.push(stat("Short-term rate", pp(d("short_rate"), 2), "commercial paper (NBER) before 1954"));
+      items.push(stat("Long-term rate", pp(d("long_rate"), 2), "long government bond yield"));
+      const yrs = []; for (let k = 1; k <= span; k++) { const r = longYear(y + k); if (r && (r.recession_share || 0) > 0) yrs.push(y + k); }
+      items.push(stat("Years with a recession", { txt: yrs.length + " of " + span }, yrs.length ? yrs.join(", ") : "none"));
     }
+    box.innerHTML = items.join("");
+  }
+  function renderNext(y) {
+    const h = nextH, z = hzYear(y), e = hzCell(y, h);
+    $("nextTitle").textContent = "After " + y + ", what happened next?";
+    if (z && e) {
+      $("nextSub").textContent = (z.basis === "monthly" ? "From " + monthName(z.base) + " to " + monthName(e.end) + " (" + (h === 120 ? "10 years" : h + " months") + ")." :
+        "Annual averages, " + y + " to " + e.end + " (monthly data for this era aren't in our panel).") + " Rates change in percentage points (pts); M2, gold and stocks in %.";
+    } else $("nextSub").textContent = "";
+    renderHzCallouts(y, h);
+    hzStats(y, h);
+    renderNextChart(y, h);
     renderNextTable(y);
+  }
+  function renderNextChart(y, h) {
+    const z = hzYear(y);
+    const span = h === 120 ? 120 : 24;
+    const monthly = !z || z.basis === "monthly";
+    $("nextChartTitle").innerHTML = (span === 120 ? "The 10 years after " : "The 24 months after ") + (monthly ? "December " + y : y + " <span class='muted'>(annual averages)</span>");
+    $("nextChartAxis").innerHTML = "Left axis: rates, %. Right axis: gold and M2, % change since " + (monthly ? "Dec " + y : y) + ". ◆ S&amp;P 500 % change at " + (span === 120 ? "+12, +24 and +120" : "+12 and +24") + " months (no monthly path: licence). Rose bands = recession.";
+    if (!HAS_CHART) return;
+    const ds = [];
+    const lineDs = (label, color, pts, opt) => Object.assign({ label, borderColor: color, backgroundColor: color, borderWidth: 1.75, pointRadius: monthly ? 0 : 2.5, tension: monthly ? 0.25 : 0, data: pts, yAxisID: "y", spanGaps: false }, opt || {});
+    let bands = [];
+    if (monthly) {
+      const base = (z && z.base) || y + "-12";
+      const ks = Array.from({ length: span + 1 }, (_, k) => k);
+      const pts = (fn) => ks.map((k) => { const v = fn(addMonths(base, k)); return isNum(v) ? { x: k, y: v } : null; }).filter(Boolean);
+      const lv = (key) => (ym) => { const L = (D.money || {}).levels || {}; const i = idx[ym]; return L[key] && i != null ? L[key][i] : null; };
+      const goldAt = (ym) => { const v = val("Gold", ym); return isNum(v) ? v : (ym < "1960-01" && ym >= "1934-02" ? 35 : null); };
+      const chg = (fn) => { const b0 = fn(base); return (ym) => { const v = fn(ym); return isNum(v) && isNum(b0) && b0 ? (v / b0 - 1) * 100 : null; }; };
+      ds.push(lineDs("Gold, % since base", SAND, pts(chg(goldAt)), { borderWidth: 3.25, yAxisID: "y2", order: 0 }));
+      ds.push(lineDs("M2, % since base", SLATE, pts(chg(lv("M2"))), { borderWidth: 3.25, yAxisID: "y2", order: 0 }));
+      ds.push(lineDs("Unemployment", SAGE, pts((ym) => val("Unemployment", ym))));
+      ds.push(lineDs("Inflation", MAUVE, pts((ym) => val("Inflation_12m", ym))));
+      ds.push(lineDs("Fed funds", TEAL, pts((ym) => val("FedFunds", ym))));
+      ds.push(lineDs("10-year yield", WGRAY, pts((ym) => val("Yield_10Y", ym)), { borderDash: [5, 4] }));
+      const t0 = tOf(base);
+      bands = recBands.filter(([s, e]) => e > t0 && s < t0 + span / 12).map(([s, e]) => [Math.max(0, (s - t0) * 12), Math.min(span, (e - t0) * 12)]);
+    } else {
+      const n = span / 12, a = longYear(y);
+      const ks = Array.from({ length: n + 1 }, (_, k) => k);
+      const pts = (fn) => ks.map((k) => { const r = longYear(y + k); const v = r ? fn(r, y + k) : null; return isNum(v) ? { x: k * 12, y: v } : null; }).filter(Boolean);
+      const chg = (key, okFn) => (r, yr) => a && isNum(a[key]) && isNum(r[key]) && a[key] && (!okFn || okFn(yr)) ? (r[key] / a[key] - 1) * 100 : null;
+      ds.push(lineDs("Gold, % since base", SAND, pts(chg("gold")), { borderWidth: 3.25, yAxisID: "y2", order: 0 }));
+      ds.push(lineDs("M2, % since base", SLATE, pts(chg("m2_bn", (yr) => yr < 1959)), { borderWidth: 3.25, yAxisID: "y2", order: 0 }));
+      ds.push(lineDs("Unemployment", SAGE, pts((r) => r.unemployment)));
+      ds.push(lineDs("Inflation", MAUVE, pts((r) => r.inflation)));
+      ds.push(lineDs("Short rate", TEAL, pts((r) => r.short_rate)));
+      ds.push(lineDs("Long rate", WGRAY, pts((r) => r.long_rate), { borderDash: [5, 4] }));
+      const x = (t) => (t - y - 0.5) * 12;
+      bands = longRecessionBands().concat(recBands.filter(([s]) => s >= 1950).map(([s, e]) => ({ from: s, to: e })))
+        .map((b) => Array.isArray(b) ? b : [b.from, b.to]).filter(([s, e]) => e > y && s < y + n + 1)
+        .map(([s, e]) => [Math.max(0, x(s)), Math.min(span, x(e))]).filter(([s, e]) => e > s);
+    }
+    const spPts = [12, 24, 120].filter((k) => k <= span).map((k) => { const c = hzCell(y, k); return c && c.sp_nom && isNum(c.sp_nom.pct) ? { x: k, y: c.sp_nom.pct } : null; }).filter(Boolean);
+    ds.push({ type: "scatter", label: "S&P 500 (nominal), % at +12/+24" + (span === 120 ? "/+120" : "") + " mo", data: spPts, yAxisID: "y2", pointStyle: "rectRot", pointRadius: 7, pointHoverRadius: 9,
+      backgroundColor: "#e7e9e6", borderColor: "#16191c", borderWidth: 1.5, order: -1, clip: false });
+    if (charts.next) charts.next.destroy();
+    const baseLbl = monthly ? "Dec " + y : String(y);
+    // align the zero lines of the two y axes (rates % on the left, % change on the right)
+    const ext = (axis) => { const v = ds.filter((d) => (d.yAxisID || "y") === axis).flatMap((d) => d.data.map((p) => p.y)).filter(isNum); return [Math.min(0, ...v), Math.max(0, ...v)]; };
+    const pad = (lo, hi) => { const r = (hi - lo) || 1; return [lo < 0 ? lo - 0.08 * r : 0, hi + 0.08 * r]; };
+    let [l0, l1] = pad(...ext("y")), [r0, r1] = pad(...ext("y2"));
+    const f = Math.max(-l0 / (l1 - l0), -r0 / (r1 - r0));
+    if (f > 0 && f < 1) { if (-l0 / (l1 - l0) < f) l0 = -f * l1 / (1 - f); else r0 = -f * r1 / (1 - f); }
+    const spLabels = { id: "spLabels", afterDatasetsDraw(c) {
+      const i = c.data.datasets.findIndex((d) => d.type === "scatter"); if (i < 0) return;
+      const m = c.getDatasetMeta(i); if (m.hidden) return; const ctx = c.ctx; ctx.save();
+      ctx.font = "700 11px " + Chart.defaults.font.family; ctx.fillStyle = "#e7e9e6";
+      const boxes = [];
+      m.data.forEach((pt, k) => { const v = c.data.datasets[i].data[k].y; const t = "S&P " + signed(v, 1, "%");
+        const w = ctx.measureText(t).width; const right = pt.x + 12 + w > c.chartArea.right;
+        const x0 = right ? pt.x - 12 - w : pt.x + 12, yb = pt.y + (v >= 0 ? -10 : 16);
+        if (boxes.some((b) => x0 < b[1] && x0 + w > b[0] && Math.abs(yb - b[2]) < 14)) return;   // skip overlapping labels (narrow screens)
+        boxes.push([x0, x0 + w, yb]); ctx.textAlign = "left"; ctx.fillText(t, x0, yb); });
+      ctx.restore(); } };
+    const xLbl = (v) => v === 0 ? baseLbl : span === 120 ? (v % 12 === 0 ? "+" + v / 12 + " yr" : "") : "+" + v + " mo";
+    const narrow = ($("nextChart").parentNode.clientWidth || 800) < 520;
+    const endTick = (fmt) => (v, i, arr) => {   // hide non-round min/max labels created by the zero alignment
+      if ((i === 0 || i === arr.length - 1) && arr.length > 3) { const st = Math.abs(arr[2].value - arr[1].value); if (st && Math.abs(v / st - Math.round(v / st)) > 1e-6) return ""; }
+      return fmt(v);
+    };
+    charts.next = new Chart($("nextChart"), {
+      type: "line", data: { datasets: ds }, plugins: [spLabels],
+      options: {
+        parsing: false, interaction: { mode: "nearest", axis: "x", intersect: false }, layout: { padding: { right: 4, top: 6 } },
+        scales: {
+          x: { type: "linear", min: 0, max: span, grid: { display: false }, ticks: { stepSize: span === 120 ? (narrow ? 24 : 12) : 6, maxRotation: 0, callback: xLbl } },
+          y: { position: "left", min: l0, max: l1, grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.05)" }, ticks: { maxTicksLimit: 6, callback: endTick((v) => Math.round(v * 10) / 10 + "%") }, title: { display: !narrow, text: "rates, %", color: "#7b837e", font: { size: 11 } } },
+          y2: { position: "right", min: r0, max: r1, grid: { display: false }, ticks: { maxTicksLimit: 6, callback: endTick((v) => (v > 0 ? "+" : "") + Math.round(v) + "%") }, title: { display: !narrow, text: "change since " + baseLbl, color: "#7b837e", font: { size: 11 } } },
+        },
+        plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: narrow ? 8 : 12, boxHeight: 3, padding: narrow ? 6 : 10, font: { size: narrow ? 10 : 12 },
+            generateLabels: (c) => Chart.defaults.plugins.legend.labels.generateLabels(c).map((l) => Object.assign(l, { text: l.text.replace(", % since base", "").replace(/ \(nominal\), % at .*/, " (◆)") })) } }, bands: { bands },
+          tooltip: { callbacks: { title: (it) => { const v = it[0].parsed.x; return v === 0 ? baseLbl : span === 120 && v % 12 === 0 ? "+" + v / 12 + " years" : "+" + v + " months"; },
+            label: (it) => " " + it.dataset.label.replace(", % since base", "").replace(/, % at .*/, "") + ": " + (it.dataset.yAxisID === "y2" ? signed(it.parsed.y, 1, "%") + " since " + baseLbl : fx(it.parsed.y, 2) + "%") } } },
+      },
+    });
   }
 
   function renderNextTable(y) {
+    const h = nextH;
     const rows = histRows.slice(0, 5).slice();
-    if (!rows.some((r) => r.year === y) && y < TARGET) rows.push({ year: y, similarity_score: (analogRow(y) || {}).similarity_score, _sel: true });
-    let html = "<thead><tr><th>Year</th><th>Similarity</th><th>Real S&amp;P 12 mo</th><th>Real S&amp;P 24 mo</th><th>Unemployment 24 mo</th><th>Gold 24 mo</th><th>Recession ≤ 24 mo</th></tr></thead><tbody>";
+    if (!rows.some((r) => r.year === y) && y < TARGET) rows.push({ year: y, similarity_score: (analogRowAny(y) || {}).similarity_score, _sel: true });
+    const hl = h === 120 ? "10 yr" : h + " mo";
+    $("nextTableTitle").innerHTML = "Across the top analog years · " + HZ_LABEL[h].toLowerCase() + " <span class='muted'>(from December of each year; before 1950, annual averages)</span>";
+    let html = "<thead><tr><th>Year</th><th>Similarity</th><th>M2 " + hl + "</th><th>Gold " + hl + "</th><th>S&amp;P " + hl + "</th><th>Real S&amp;P " + hl + "</th><th>" + (h === 120 ? "Recessions began" : "Recession ≤ " + h + " mo") + "</th></tr></thead><tbody>";
+    const pc = (c, d) => c && c.status === "ok" && isNum(c.pct) ? "<td class='" + cls(c.pct) + "'>" + signed(c.pct, d, "%") + "</td>" : "<td class='muted'>" + (c && c.status === "pending" ? "not yet" : c && c.status === "break" ? "n/c" : "–") + "</td>";
     rows.forEach((r) => {
-      const w = nextRow(r.year) || {};
+      const w = nextRow(r.year) || {}, e = hzCell(r.year, h) || {};
+      let rec = "–";
+      if (h === 120) {
+        const z = hzYear(r.year);
+        if (z && z.basis === "monthly" && e.end && e.end <= D.series.dates[D.series.dates.length - 1]) rec = String((D.series.recessions || []).filter(([a]) => a > z.base && a <= e.end).length);
+      } else {
+        const v = h === 12 ? w.recession_12m : w.recession_24m;
+        rec = v === true ? "<span class='badge badge-yes'>Yes</span>" : v === false ? "<span class='badge badge-no'>No</span>" : "–";
+      }
       html += "<tr data-year='" + r.year + "' class='" + (r.year === y ? "sel" : "") + "'><td><b>" + r.year + "</b>" + (r._sel ? " <span class='muted small'>(selected)</span>" : "") + "</td><td>" + fx(r.similarity_score, 0) + "</td>" +
-        "<td class='" + cls(w.sp_real_12m) + "'>" + signed(w.sp_real_12m, 1, "%") + "</td><td class='" + cls(w.sp_real_24m) + "'>" + signed(w.sp_real_24m, 1, "%") + "</td>" +
-        "<td>" + signed(w.unemployment_24m, 1, " pts") + "</td><td>" + signed(w.gold_24m, 0, "%") + "</td>" +
-        "<td>" + (w.recession_24m === true ? "<span class='badge badge-yes'>Yes</span>" : w.recession_24m === false ? "<span class='badge badge-no'>No</span>" : "–") + "</td></tr>";
+        pc(e.m2, 1) + pc(e.gold, 1) + pc(e.sp_nom, 1) + pc(e.sp_real, 1) + "<td>" + rec + "</td></tr>";
     });
     $("nextTable").innerHTML = html + "</tbody>";
     $("nextTable").querySelectorAll("tr[data-year]").forEach((tr) => tr.onclick = () => selectYear(+tr.dataset.year));
-    const top5 = histRows.slice(0, 5).map((r) => nextRow(r.year) || {});
-    const rec = top5.filter((w) => w.recession_24m === true).length;
-    const r24 = top5.map((w) => w.sp_real_24m).filter(isNum).sort((a, b) => a - b);
-    if (r24.length) {
-      const med = r24.length % 2 ? r24[(r24.length - 1) / 2] : (r24[r24.length / 2 - 1] + r24[r24.length / 2]) / 2;
-      $("nextSummary").innerHTML = "Of the top 5 historical matches, <strong>" + rec + " of 5</strong> were followed by a recession within two years. Real S&amp;P 24-month results ranged from <strong>" +
-        signed(r24[0], 0, "%") + "</strong> to <strong>" + signed(r24[r24.length - 1], 0, "%") + "</strong> (median " + signed(med, 0, "%") + "). Same-looking years, very different endings.";
-    }
+    const top5 = histRows.slice(0, 5);
+    const rng = (k) => { const v = top5.map((r) => (hzCell(r.year, h) || {})[k]).filter((c) => c && c.status === "ok" && isNum(c.pct)).map((c) => c.pct).sort((a, b) => a - b); return v; };
+    const sp = rng("sp_nom"), g = rng("gold"), m = rng("m2");
+    const txt = (v) => v.length ? "<strong>" + signed(v[0], 0, "%") + "</strong> to <strong>" + signed(v[v.length - 1], 0, "%") + "</strong>" : "–";
+    if (sp.length) {
+      let s = "Across the top 5 matches, " + HZ_LABEL[h].toLowerCase() + ": S&amp;P 500 " + txt(sp) + ", gold " + txt(g) + ", M2 " + txt(m) + " (" + sp.length + " of 5 with a finished " + (h === 120 ? "decade" : "window") + ").";
+      if (h !== 120) { const rec = top5.map((r) => nextRow(r.year) || {}).filter((w) => w.recession_24m === true).length; s += " " + rec + " of 5 were followed by a recession within two years."; }
+      $("nextSummary").innerHTML = s + " Same-looking years, very different endings.";
+    } else $("nextSummary").innerHTML = "";
   }
 
   // ------------------------------------------------------------ SNAPSHOT
