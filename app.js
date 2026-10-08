@@ -1264,10 +1264,17 @@
           { label: "ON RRP", data: ann.map((r) => ({ x: r.y + 0.5, y: r.rrp })), borderColor: SAND, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
           { label: "Primary credit", data: ann.map((r) => ({ x: r.y + 0.5, y: r.primary })), borderColor: ROSE, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
           { label: "BTFP", data: ann.map((r) => ({ x: r.y + 0.5, y: r.btfp })), borderColor: TEAL, borderWidth: 1.75, pointRadius: 0, tension: 0.15 },
+          { label: "Peak (spike)", type: "scatter", data: (P.peaks || []).map((p) => {
+              const d = new Date(p.date + "T00:00:00Z"), y0 = Date.UTC(d.getUTCFullYear(), 0, 1);
+              return { x: d.getUTCFullYear() + (d - y0) / (365.25 * 864e5), y: p.bn, label: p.label, date: p.date };
+            }), pointRadius: 6, pointHoverRadius: 8, pointStyle: "rectRot",
+            backgroundColor: (P.peaks || []).map((p) => /RRP/.test(p.series) ? SAND : /WRES/.test(p.series) ? SAGE : /primary/.test(p.series) ? ROSE : TEAL),
+            borderColor: "#16191c", borderWidth: 1.5 },
         ] },
         options: { parsing: false, interaction: { mode: "nearest", axis: "x", intersect: false },
           plugins: { legend: { display: true, position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 3 } },
-            tooltip: { callbacks: { title: (it) => Math.floor(it[0].parsed.x), label: (it) => " " + it.dataset.label + ": $" + fx(it.parsed.y, 1) + " bn" } } },
+            tooltip: { callbacks: { title: (it) => it[0].raw && it[0].raw.date ? it[0].raw.date : Math.floor(it[0].parsed.x),
+              label: (it) => " " + (it.raw && it.raw.label ? it.raw.label + " peak" : it.dataset.label) + ": $" + fx(it.parsed.y, 1) + " bn" } } },
           scales: { x: { type: "linear", grid: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? v : "", maxTicksLimit: 8 } },
             y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { callback: (v) => "$" + v + "bn" } } } },
       });
