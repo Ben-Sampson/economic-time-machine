@@ -32,6 +32,7 @@
         <a href="#eras">Monetary eras</a>
         <a href="#ranking">Ranking</a>
         <a href="#history">History</a>
+        <a href="#wars">Wars</a>
         <a href="#compare">Compare library</a>
         <a href="#press">Printing press</a>
         <a href="#method">Method</a>
@@ -341,6 +342,66 @@
     </section>
 
 
+    <!-- WARS AND CONFLICTS -->
+    <section class="section" id="wars">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Wars and conflicts</p>
+          <h2>How America paid for its wars</h2>
+          <p class="section-sub">Every major U.S. war since 1900, set against the money regimes it was fought under. Pick a war to see how much the government borrowed, how much the money supply grew, how big defense got and what happened to prices.</p>
+        </div>
+        <p class="war-caveat" role="note"><span class="notice-dot" aria-hidden="true"></span><span id="warCaveatTop">Debt and M2 changes during a war are not the cost of the war.</span></p>
+
+        <div class="card war-tl-card">
+          <div class="card-title">1900–2026: wars, the Cold War and the money regimes <span class="muted">(tap a war to load it)</span></div>
+          <div class="war-tl" id="warTimeline" aria-label="Timeline of U.S. wars and conflicts, 1900 to 2026"></div>
+          <div class="war-tl-legend" id="warTlLegend"></div>
+          <details class="war-markers">
+            <summary>Other conflicts on the timeline <span class="muted">(markers only)</span></summary>
+            <ul id="warMarkerList"></ul>
+          </details>
+          <p class="fine" id="warTlSources"></p>
+        </div>
+
+        <div class="war-pick">
+          <div class="chips chips-scroll" id="warChips" role="tablist" aria-label="Pick a war"></div>
+        </div>
+
+        <div class="war-panel card" id="warPanel" aria-live="polite">
+          <div class="war-head">
+            <div>
+              <p class="eyebrow" id="warKicker">Selected war</p>
+              <h3 id="warTitle">World War II</h3>
+              <p class="war-meta" id="warMeta"></p>
+            </div>
+          </div>
+          <p class="war-oneliner" id="warOneLiner"></p>
+          <div class="war-iran hidden" id="warIran"></div>
+          <div class="war-callouts" id="warCallouts"></div>
+          <p class="war-caveat war-caveat-in" role="note"><span class="notice-dot" aria-hidden="true"></span><span id="warCaveat"></span></p>
+          <div class="war-chart-wrap">
+            <div class="card-title" id="warChartTitle">Event study</div>
+            <p class="fine hz-axis" id="warChartAxis"></p>
+            <div class="chart-box chart-war"><canvas id="warChart" aria-label="Debt, defense, inflation, money growth, gold and S&amp;P 500 changes around the selected war"></canvas></div>
+          </div>
+          <p class="war-era" id="warEra"></p>
+          <p class="fine" id="warSources"></p>
+        </div>
+
+        <div class="card war-table-card">
+          <div class="card-title">The major wars side by side <span class="muted">(nominal dollars of the time; tap a row)</span></div>
+          <div class="table-scroll"><table class="next-table war-table" id="warTable"></table></div>
+          <p class="fine" id="warTableNote"></p>
+          <p class="fine" id="warTableSources"></p>
+        </div>
+
+        <p class="war-closing" id="warClosing"></p>
+        <p class="fine" id="warClosingNote"></p>
+        <p class="fine">Educational project, not financial advice. Historical arithmetic, not a forecast.</p>
+      </div>
+    </section>
+
+
     <!-- COMPARE LIBRARY -->
     <section class="section" id="compare">
       <div class="wrap">
@@ -576,6 +637,7 @@
           <p><strong>Limits worth knowing.</strong> Some series start later than 1950 (money growth and gold in 1960, the dollar in 1973, the yield curve in 1976, home prices in 1987), so early years are compared on fewer indicators. 2026 is a partial year (data through <span id="methodLatest">the latest month</span>). Similar numbers don't mean similar causes, and no two eras are truly alike.</p>
           <p><strong>"If 2026 follows&hellip;" arithmetic.</strong> For an analog year Y we take the growth from December Y to December Y+2 in M2, the Fed balance sheet and the monetary base, and apply it to today's level: <em>implied added dollars = today's level &times; (level in Dec Y+2 &divide; level in Dec Y &minus; 1)</em>. It's what history would imply if the next two years repeated that era. It is historical arithmetic, not a forecast. The Fed balance sheet series (WALCL) starts in Dec 2002, so for earlier analog years only M2 and the monetary base are used.</p>
           <p><strong>&ldquo;What happened next&rdquo; horizons.</strong> For a selected year Y (1950 on) we compare December Y with December 12, 24 and 120 months later: M2 (FRED M2SL), gold (World Bank Pink Sheet monthly average from 1960, the official $35 price before) and the S&amp;P 500 (Shiller, nominal and inflation-adjusted, price only). For years before 1950 the same horizons use annual averages (Y to Y+1, Y+2, Y+10), with M2 from Census <em>Historical Statistics</em> Series X 415 (1903&ndash;1958). The two M2 series use different definitions, so no change is computed across 1958&ndash;59, and a horizon that hasn&rsquo;t finished yet says so. The S&amp;P 500 appears only as % changes, never as a rebased path. Historical arithmetic, not a forecast.</p>
+          <p><strong>Wars and conflicts.</strong> Conflict dates and legal basis come from the U.S. Department of State Office of the Historian, the Congressional Research Service (<em>Instances of Use of U.S. Armed Forces Abroad</em>, R42738; declarations and authorizations, RL31133; IN12571 and IN12678 on Iran), the VA&rsquo;s periods of war (38 CFR 3.2) and War Powers letters to Congress published on govinfo. The 2026 Iran row is labelled by what it legally is: hostilities without a declaration of war or a congressional authorization, ongoing as of Oct 8, 2026, so its numbers are year-to-date. For each major war, debt and deficits run from the end of the fiscal year before the war began to the end of the fiscal year in which it ended (OMB Historical Tables; before 1940, Census <em>Historical Statistics</em> Series Y 493, with Series F 1 GNP as the denominator). M2, inflation, gold and the S&amp;P 500 use calendar years. The event study runs from the year before the war began (t&minus;1) to five years after (t+5); the S&amp;P 500 appears only as % changes. Debt and M2 changes during a war are <em>not</em> the cost of the war: they include everything else happening in the budget and the economy. Where they exist, CRS estimates of military operations costs (RS22926) are shown alongside.</p>
           <p class="muted small" id="methodFeatures"></p>
         </div>
 
@@ -623,6 +685,7 @@
             <li><strong>FRED, citation required:</strong> 10Y&minus;2Y spread, Federal Reserve Bank of St. Louis (<a href="https://fred.stlouisfed.org/series/T10Y2Y" target="_blank" rel="noopener">T10Y2Y</a>, monthly averages, charts only); WTI oil (<a href="https://fred.stlouisfed.org/series/WTISPLC" target="_blank" rel="noopener">WTISPLC</a>, shown as yearly % change; pre-2013 &copy; Dow Jones &amp; Company, from Aug 2013 U.S. Energy Information Administration); recession dates, Federal Reserve Bank of St. Louis based on NBER (<a href="https://fred.stlouisfed.org/series/USREC" target="_blank" rel="noopener">USREC</a>).</li>
             <li><strong>Per-taxpayer figures</strong> (public domain, cited as requested): taxpayer counts from the <a href="https://www.irs.gov/statistics/soi-tax-stats-individual-time-series-statistical-tables" target="_blank" rel="noopener">IRS, Statistics of Income</a> (individual returns filed; taxable returns); individual income-tax receipts from <a href="https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/" target="_blank" rel="noopener">OMB Historical Tables, Table 2.1</a>; receipts, deficit and interest from OMB via FRED (<a href="https://fred.stlouisfed.org/series/FYFSD" target="_blank" rel="noopener">FYFSD</a>, <a href="https://fred.stlouisfed.org/series/FYOINT" target="_blank" rel="noopener">FYOINT</a>, <a href="https://fred.stlouisfed.org/series/FYFR" target="_blank" rel="noopener">FYFR</a>); households and median household income from the U.S. Census Bureau via FRED (<a href="https://fred.stlouisfed.org/series/TTLHH" target="_blank" rel="noopener">TTLHH</a>, <a href="https://fred.stlouisfed.org/series/MEHOINUSA646N" target="_blank" rel="noopener">MEHOINUSA646N</a>); population from BEA via FRED (<a href="https://fred.stlouisfed.org/series/POPTHM" target="_blank" rel="noopener">POPTHM</a>); latest daily debt from U.S. Treasury, Fiscal Data, <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener">Debt to the Penny</a> (Oct 6, 2026). No agency endorses this project.</li>
             <li><strong>Long-history sources:</strong> U.S. Census Bureau, <em>Historical Statistics of the United States</em> (unemployment Series D 86; money stock Series X 415); official U.S. gold price via statute (Coinage Act; Gold Reserve Act of 1934); NBER commercial-paper rate via FRED (charts with citation only, no download).</li>
+            <li><strong>Wars and conflicts (public domain, cited):</strong> U.S. Department of State, <a href="https://history.state.gov/milestones" target="_blank" rel="noopener">Office of the Historian</a>; Congressional Research Service (<a href="https://www.congress.gov/crs-product/R42738" target="_blank" rel="noopener">R42738</a>, <a href="https://www.congress.gov/crs-product/RL31133" target="_blank" rel="noopener">RL31133</a>, <a href="https://www.congress.gov/crs_external_products/IN/PDF/IN12571/IN12571.1.pdf" target="_blank" rel="noopener">IN12571</a>, <a href="https://www.congress.gov/crs_external_products/IN/PDF/IN12678/IN12678.5.pdf" target="_blank" rel="noopener">IN12678</a>; war costs from <a href="https://www.everycrsreport.com/reports/RS22926.html" target="_blank" rel="noopener">RS22926</a>); War Powers letters on <a href="https://www.govinfo.gov/content/pkg/CDOC-119hdoc167/html/CDOC-119hdoc167.htm" target="_blank" rel="noopener">govinfo</a>; VA periods of war (<a href="https://www.ecfr.gov/current/title-38/chapter-I/part-3/section-3.2" target="_blank" rel="noopener">38 CFR 3.2</a>); <a href="https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/" target="_blank" rel="noopener">OMB Historical Tables</a> 1.1, 1.2, 3.1 and 7.1; U.S. Treasury, Fiscal Data, <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener">Debt to the Penny</a>; U.S. Census Bureau, <a href="https://www.census.gov/library/publications/1975/compendia/hist_stats_colonial-1970.html" target="_blank" rel="noopener"><em>Historical Statistics of the United States</em></a> (Series Y 466&ndash;467, Y 493, F 1, Y 393/402) and historical population estimates.</li>
             <li><strong>Compare library (public domain, cited as requested):</strong> BLS CPI/PPI/earnings/beef/rent/electricity/medical/daycare/health-insurance via FRED or BLS flat files; Federal Reserve Board revolving credit, delinquencies, industrial production and H.4.1 plumbing; BEA saving rate, real GDP and trade balance; OMB debt/deficit/interest-to-GDP; Census median home sale price and household income; Treasury debt-holder series; Fed DFA wealth shares; BLS purchasing-power and labor-force series; World Bank Pink Sheet silver and copper (CC BY 4.0).</li>
             <li><strong>Compare library &amp; printing-press cards (public domain / CC BY, cited):</strong> CMS National Health Expenditure Accounts; AHRQ MEPS-Insurance Component; DOL Women&rsquo;s Bureau National Database of Childcare Prices; OMB Historical Tables 2.1 &amp; 3.1; Treasury Fiscal Data Status Report of U.S. Government Gold Reserve; Fed Distributional Financial Accounts; International Monetary Fund, International Financial Statistics, official reserve gold (RAFAGOLDV_OZT, accessed via <a href="https://db.nomics.world/IMF/IFS" target="_blank" rel="noopener">DBnomics</a>; reuse with attribution; tonnes and net flows are our calculation).</li>
             <li><strong>Compare library (citation required, charts + link only):</strong> Freddie Mac 30-year mortgage rate (<a href="https://fred.stlouisfed.org/series/MORTGAGE30US" target="_blank" rel="noopener">MORTGAGE30US</a>); National Association of Realtors housing affordability index (<a href="https://fred.stlouisfed.org/series/FIXHAI" target="_blank" rel="noopener">FIXHAI</a>, short window).</li>

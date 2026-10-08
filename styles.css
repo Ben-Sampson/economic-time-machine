@@ -654,3 +654,78 @@ sup.fn a{color:inherit}
 @media (max-width:700px){.hz-callouts{grid-template-columns:1fr}.hz-stats{grid-template-columns:1fr 1fr}.hz{padding:14px 16px}}
 .chart-next{height:380px}
 @media (max-width:700px){.chart-next{height:400px}}
+
+/* ---------------- Wars and conflicts ---------------- */
+.war-caveat{display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;font-size:.88rem;color:var(--muted);background:rgba(216,195,147,.06);border:1px solid rgba(216,195,147,.28);border-radius:12px;padding:10px 14px;line-height:1.45}
+.war-caveat .notice-dot{margin-top:7px}
+.war-caveat-in{margin:4px 0 16px}
+.war-tl-card{margin-bottom:16px}
+.war-tl{position:relative;padding:0 2px}
+.wtl-plot{position:relative;height:150px;border-radius:10px;overflow:hidden;background:rgba(255,255,255,.015)}
+.wtl-era{position:absolute;top:0;bottom:0;border-right:1px solid rgba(255,255,255,.04)}
+.wtl-era span{position:absolute;left:6px;bottom:4px;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(231,233,230,.5);white-space:nowrap}
+.wtl-nixon{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed rgba(216,195,147,.85);z-index:2}
+.wtl-nixon span{position:absolute;top:2px;left:4px;font-size:.62rem;font-weight:700;color:var(--cyear);white-space:nowrap}
+.wtl-cw{position:absolute;top:86px;height:16px;background:rgba(154,168,189,.22);border:1px solid rgba(154,168,189,.45);border-radius:4px;z-index:1}
+.wtl-cw span{position:absolute;left:6px;top:0;font-size:.66rem;line-height:14px;font-weight:700;color:#c9d2df;white-space:nowrap}
+.wtl-cwe{position:absolute;top:90px;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:#c9d2df;z-index:3;cursor:help}
+.wtl-mk{position:absolute;top:113px;width:8px;height:8px;margin-left:-4px;background:var(--muted);transform:rotate(45deg);z-index:3;cursor:help;border-radius:1px}
+.wtl-mk:hover,.wtl-mk:focus,.wtl-cwe:hover,.wtl-cwe:focus{background:var(--text);outline:none}
+.wtl-war{position:absolute;top:44px;height:20px;min-width:5px;padding:0;border:0;border-radius:4px;background:rgba(204,143,143,.55);cursor:pointer;z-index:3;transition:background .15s}
+.wtl-war:hover{background:rgba(204,143,143,.8)}
+.wtl-war.sel{background:var(--bad);box-shadow:0 0 0 2px rgba(231,233,230,.85)}
+.wtl-war.ongoing{background:repeating-linear-gradient(135deg,rgba(204,143,143,.85) 0 3px,rgba(204,143,143,.35) 3px 6px)}
+.wtl-lbl{position:absolute;font-size:.72rem;font-weight:700;color:var(--muted);white-space:nowrap;cursor:pointer;z-index:4;transform:translateX(-50%)}
+.wtl-lbl.up{top:26px}.wtl-lbl.down{top:67px}
+.wtl-lbl.right{transform:translateX(-100%)}.wtl-lbl.left{transform:none}
+.wtl-lbl.sel{color:var(--text)}
+.wtl-axis{position:relative;height:20px;margin-top:4px}
+.wtl-axis span{position:absolute;transform:translateX(-50%);font-size:.72rem;color:var(--faint);font-variant-numeric:tabular-nums}
+.wtl-axis span:first-child{transform:none}
+.war-tl-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.war-tl-legend .legend{display:inline-flex;align-items:center;gap:6px}
+.wsw{display:inline-block;width:14px;height:8px;border-radius:2px}
+.wsw-war{background:rgba(204,143,143,.7)}.wsw-mk{width:8px;height:8px;background:var(--muted);transform:rotate(45deg)}
+.wsw-cw{background:rgba(154,168,189,.35);border:1px solid rgba(154,168,189,.6)}.wsw-nx{width:0;height:12px;border-left:1.5px dashed var(--cyear);border-radius:0}
+.war-markers{margin-top:10px;font-size:.86rem}
+.war-markers summary{cursor:pointer;color:var(--c2026b);font-weight:600}
+.war-markers ul{margin:10px 0 0;padding-left:18px;color:var(--muted);line-height:1.45}
+.war-markers li{margin-bottom:6px}
+.war-pick{margin:0 0 12px}
+.war-panel{margin-bottom:16px}
+.war-head h3{font-size:clamp(1.3rem,2.4vw,1.7rem);font-weight:800}
+.war-head .eyebrow{margin-bottom:6px}
+.war-meta{margin:6px 0 0;font-size:.86rem;color:var(--faint)}
+.war-type{color:var(--text);font-weight:600}
+.war-oneliner{font-size:1.05rem;color:var(--text);margin:12px 0 16px;max-width:80ch;line-height:1.5}
+.war-callouts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.war-v{font-size:clamp(1.6rem,3.2vw,2.2rem)}
+.war-iran{margin:0 0 16px;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:14px 16px}
+.war-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.war-badges span{font-size:.74rem;font-weight:700;letter-spacing:.03em;color:var(--text);border:1px solid var(--line2);background:rgba(255,255,255,.03);border-radius:999px;padding:4px 10px}
+.war-badges span:first-child{border-color:rgba(143,188,152,.55);background:rgba(143,188,152,.12)}
+.war-dates{margin:0;padding-left:18px;font-size:.88rem;color:var(--muted);line-height:1.5}
+.war-dates b{color:var(--text);font-weight:600}
+.war-chart-wrap{margin-top:4px}
+.chart-war{height:380px}
+.war-era{margin:12px 0 0;font-size:.9rem;color:var(--muted)}
+.war-era b{color:var(--text)}
+.war-table-card{margin-bottom:18px}
+.war-table{min-width:880px}
+.war-table td.war-type-cell{text-align:left;color:var(--muted);white-space:normal;min-width:110px}
+.war-table th:nth-child(3){text-align:left}
+.war-closing{font-size:clamp(1.15rem,2.2vw,1.45rem);font-weight:800;letter-spacing:-.01em;margin:6px 0 0;max-width:62ch}
+@media (max-width:860px){.war-callouts{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){
+  .war-callouts{grid-template-columns:1fr}
+  .wtl-lbl{font-size:.66rem}
+  .chart-war{height:400px}
+  .war-oneliner{font-size:1rem}
+}
+/* mobile overflow fix: let footer grid columns shrink and long tokens wrap */
+.footer-grid>*{min-width:0}
+.foot-list,.footer .muted.small{overflow-wrap:anywhere}
+/* Cold War label sits in the 1962-1989 gap between event dots */
+.wtl-cw span{left:70%;transform:translateX(-50%)}
+.wtl-cw span em{font-style:normal}
+@media (max-width:600px){.wtl-cw span em{display:none}.wtl-cw span{font-size:.6rem}}

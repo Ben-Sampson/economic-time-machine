@@ -97,12 +97,12 @@
     return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   }
   async function loadData() {
-    const names = ["series", "annual", "what_next", "analogs", "money", "eras", "long_annual", "analogs_long", "compare_library", "expansion"];
+    const names = ["series", "annual", "what_next", "analogs", "money", "eras", "long_annual", "analogs_long", "compare_library", "expansion", "wars"];
     try {
       if (location.protocol === "file:") throw new Error("file");
       const got = await Promise.all(names.map((n) => fetch("data/" + n + ".json", { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(n); return r.json(); })));
       return { series: got[0], annual: got[1], whatNext: got[2], analogs: got[3], money: got[4],
-        eras: got[5], longAnnual: got[6], analogsLong: got[7], compareLibrary: got[8], expansion: got[9] };
+        eras: got[5], longAnnual: got[6], analogsLong: got[7], compareLibrary: got[8], expansion: got[9], wars: got[10] };
     } catch (e) {
       await loadScript("data/bundle.js");
       return window.MACRO_DATA;
@@ -1661,6 +1661,195 @@
     $("ptxTickSub").innerHTML = "Estimate, not an official figure. Starts from Treasury's Debt to the Penny (" + tn(last.debt_total_bn, 2) + " on " + dayName(c.to) + ") and adds about $" + fx(c.per_second, 0) +
       " a second, the average pace of the past 12 months (" + usd(c.per_taxpayer_per_day) + " per taxpayer per day" + fn(last, ["returns_filed"]) + ").";
   }
+
+  // ------------------------------------------------------------ WARS AND CONFLICTS
+  let warSel = "wwii";
+  const W_T0 = 1900, W_T1 = 2027;
+  const wPct = (t) => Math.max(0, Math.min(100, (t - W_T0) / (W_T1 - W_T0) * 100));
+  function money$(bn) {
+    if (!isNum(bn)) return "–";
+    const a = Math.abs(bn), sg = bn < 0 ? "−" : "+";
+    return sg + (a >= 1000 ? "$" + fx(a / 1000, 2) + "T" : "$" + fx(a, a >= 100 ? 0 : 1) + "B");
+  }
+  function plain$(bn) { return isNum(bn) ? (bn >= 1000 ? "$" + fx(bn / 1000, 2) + "T" : "$" + fx(bn, bn >= 100 ? 0 : 1) + "B") : "–"; }
+  function srcLine(list, lead) {
+    return (lead || "Sources: ") + (list || []).map((x) => "<a href='" + x.url + "' target='_blank' rel='noopener'>" + x.label + "</a>").join("; ") + ".";
+  }
+  const warMajor = (id) => ((D.wars || {}).majors || []).find((m) => m.id === id);
+  const fyLabel = (m) => (m.fy_window || "").replace(/ end/g, "").replace("->", "→");
+  const cyLabel = (m) => (m.cy_window || "").replace("->", "→");
+
+  function renderWars() {
+    const W = D.wars || {};
+    if (!W.available) { $("wars").classList.add("hidden"); return; }
+    $("warCaveatTop").textContent = W.caveat;
+    $("warCaveat").textContent = W.caveat;
+    renderWarTimeline();
+    $("warTlSources").innerHTML = srcLine(W.timeline_sources, "Timeline sources: ") + " Monetary-era bands as in the Monetary eras section.";
+    $("warChips").innerHTML = W.majors.map((m) => "<button class='chip' role='tab' type='button' data-war='" + m.id + "' aria-selected='false'>" + m.short + (m.end ? "" : " <span class='muted'>(ongoing)</span>") + "</button>").join("");
+    $("warChips").querySelectorAll("button").forEach((b) => b.onclick = () => selectWar(b.dataset.war));
+    renderWarTable();
+    $("warClosing").textContent = W.closing;
+    const g = (id) => warMajor(id) || {};
+    const k = g("korea"), w2 = g("wwii"), w1 = g("wwi");
+    $("warClosingNote").innerHTML = "The numbers behind that line: WWII debt " + money$(w2.debt_change_bn) + " against a CRS cost of " + plain$(w2.crs_cost_bn) + ", with M2 " + signed(w2.m2_change_pct, 0, "%") +
+      "; WWI debt " + money$(w1.debt_change_bn) + " against a CRS cost of " + plain$(w1.crs_cost_bn) + "; Korea debt only " + money$(k.debt_change_bn) + " against a CRS cost of " + plain$(k.crs_cost_bn) +
+      ", with deficits averaging " + fx(k.deficit_avg, 1) + "% of GDP and tax increases in the Revenue Acts of 1950 and 1951. " + W.caveat;
+    selectWar(warSel, false);
+  }
+
+  function renderWarTimeline() {
+    const W = D.wars, E = D.eras || {};
+    let h = "<div class='wtl-plot'>";
+    (E.bands || []).forEach((b) => {
+      const l = wPct(b.from), r = wPct(Math.min(b.to, W_T1));
+      h += "<div class='wtl-era' style='left:" + l + "%;width:" + (r - l) + "%;background:" + b.color + "'><span>" + b.short + "</span></div>";
+    });
+    const nx = (E.nixon || {}).t || 1971.62;
+    h += "<div class='wtl-nixon' style='left:" + wPct(nx) + "%'><span>Aug 1971</span></div>";
+    const cw = W.timeline.find((t) => t.id === "cold_war");
+    if (cw) h += "<div class='wtl-cw' style='left:" + wPct(cw.from) + "%;width:" + (wPct(cw.to) - wPct(cw.from)) + "%' title='" + cw.name + ": " + cw.desc.replace(/'/g, "&#39;") + "'><span>Cold War<em> 1947–91</em></span></div>";
+    W.timeline.filter((t) => t.category === "cold_war_event").forEach((t) => {
+      h += "<span class='wtl-cwe' tabindex='0' style='left:" + wPct(t.from + 1 / 24) + "%' title='" + (monthName(t.start) + ": " + t.name.replace("Cold War event: ", "")).replace(/'/g, "&#39;") + "'></span>";
+    });
+    W.timeline.filter((t) => t.category === "marker").forEach((t) => {
+      h += "<span class='wtl-mk' tabindex='0' style='left:" + wPct((t.from + t.to) / 2) + "%' title='" + (t.name + " (" + monthName(t.start) + (t.end && t.end !== t.start ? "–" + monthName(t.end) : "") + "; " + t.type + ")").replace(/'/g, "&#39;") + "'></span>";
+    });
+    const majors = W.timeline.filter((t) => t.category === "major_war").sort((a, b) => a.from - b.from);
+    majors.forEach((t, i) => {
+      const l = wPct(t.from), r = wPct(t.to), mid = (l + r) / 2;
+      const pos = i % 2 === 0 ? "up" : "down";
+      const align = mid > 92 ? "right" : mid < 6 ? "left" : "center";
+      h += "<button type='button' class='wtl-war" + (t.ongoing ? " ongoing" : "") + "' data-war='" + t.id + "' style='left:" + l + "%;width:" + (r - l) + "%' aria-label='" + t.name + "'></button>";
+      h += "<span class='wtl-lbl " + pos + " " + align + "' data-war='" + t.id + "' style='left:" + mid + "%'>" + t.short + "</span>";
+    });
+    h += "</div><div class='wtl-axis'>" + [1900, 1925, 1950, 1975, 2000, 2025].map((y) => "<span style='left:" + wPct(y) + "%'>" + y + "</span>").join("") + "</div>";
+    $("warTimeline").innerHTML = h;
+    $("warTimeline").querySelectorAll("[data-war]").forEach((b) => b.onclick = () => selectWar(b.dataset.war, true));
+    requestAnimationFrame(() => $("warTimeline").querySelectorAll(".wtl-era span, .wtl-cw span").forEach((sp) => { sp.style.visibility = sp.scrollWidth > sp.parentNode.clientWidth - 6 ? "hidden" : "visible"; }));
+    $("warTlLegend").innerHTML = "<span class='legend'><i class='wsw wsw-war'></i>Major war (tap to load)</span><span class='legend'><i class='wsw wsw-mk'></i>Other conflict (hover or tap for name)</span>" +
+      "<span class='legend'><i class='wsw wsw-cw'></i>Cold War, with key events</span><span class='legend'><i class='wsw wsw-nx'></i>Aug 1971: gold window closed</span><span class='legend muted'>Background tints = monetary eras</span>";
+    $("warMarkerList").innerHTML = W.timeline.filter((t) => t.category === "marker" || t.category === "era_band" || t.category === "cold_war_event").map((t) =>
+      "<li><b>" + t.name + "</b> <span class='muted'>(" + monthName(t.start) + (t.end && t.end !== t.start ? " – " + monthName(t.end) : t.end ? "" : " – ongoing") + "; " + t.type + ")</span> " + t.desc + " <a href='" + t.url + "' target='_blank' rel='noopener'>Source</a></li>").join("");
+  }
+
+  function warCard(k, big, from, sub, color, bigCls) {
+    return "<div class='hz' style='--hzc:" + (color || "var(--line2)") + "'><div class='hz-k'>" + k + "</div><div class='hz-v war-v " + (bigCls || "") + "'>" + big + "</div>" +
+      (from ? "<div class='hz-from'>" + from + "</div>" : "") + (sub ? "<div class='hz-sub'>" + sub + "</div>" : "") + "</div>";
+  }
+
+  function selectWar(id, scroll) {
+    const m = warMajor(id); if (!m) return;
+    warSel = id;
+    const W = D.wars, iran = id === "iran_2026";
+    $("warChips").querySelectorAll("button").forEach((b) => { const on = b.dataset.war === id; b.classList.toggle("active", on); b.setAttribute("aria-selected", on); });
+    $("warTimeline").querySelectorAll(".wtl-war,.wtl-lbl").forEach((b) => b.classList.toggle("sel", b.dataset.war === id));
+    $("warTable").querySelectorAll("tr[data-war]").forEach((tr) => tr.classList.toggle("sel", tr.dataset.war === id));
+    $("warKicker").textContent = iran ? "Ongoing · year-to-date only" : "Selected war";
+    $("warTitle").textContent = m.name;
+    $("warMeta").innerHTML = monthName(m.start) + " – " + (m.end ? monthName(m.end) : "ongoing (as of Oct 8, 2026)") + " · <span class='war-type'>" + cap(m.type) + "</span> · " + m.legal_basis;
+    $("warOneLiner").textContent = m.one_liner;
+    const ir = $("warIran");
+    if (iran) {
+      ir.classList.remove("hidden");
+      ir.innerHTML = "<div class='war-badges'><span>U.S.-Iran conflict, 2026</span><span>Undeclared hostilities: no declaration of war, no AUMF</span><span>Ongoing, intermittent (as of Oct 8, 2026)</span><span>Year-to-date figures only</span></div>" +
+        "<ol class='war-dates'>" + W.iran_timeline.map((e) => "<li><b>" + e.date + "</b> " + e.text + " <a href='" + e.src.url + "' target='_blank' rel='noopener'>Source</a></li>").join("") + "</ol>" +
+        "<p class='fine'>War-powers resolutions to end the hostilities have been introduced in Congress but have not become law (CRS IN12678). This card reports dates and published numbers only.</p>";
+    } else { ir.classList.add("hidden"); ir.innerHTML = ""; }
+
+    let c = "";
+    if (!iran) {
+      const dpLbl = m.id === "wwi" ? "Federal debt ÷ GNP (Census <em>Historical Statistics</em>), end of FY" : "Debt held by the public, % of GDP, end of FY";
+      c += warCard("Debt added", money$(m.debt_change_bn), signed(m.debt_change_pct, 0, "%") + " · " + fyLabel(m),
+        (isNum(m.debt_change_2025usd_bn) ? plain$(m.debt_change_2025usd_bn) + " in 2025 dollars" : "") + (isNum(m.debt_per_household) ? " · $" + fx(m.debt_per_household, 0) + " per household" : isNum(m.debt_per_return) ? " · $" + fx(m.debt_per_return, 0) + " per tax return" : ""), ROSE);
+      c += warCard("Debt vs the economy", fx(m.dpub_start, 1) + "% → " + fx(m.dpub_end, 1) + "%", "before → after", dpLbl, ROSE);
+      c += warCard("Money supply (M2)", signed(m.m2_change_pct, 0, "%"), money$(m.m2_change_bn) + " · " + cyLabel(m), isNum(m.m2_per_household) ? "$" + fx(m.m2_per_household, 0) + " per household" : "M2 = cash plus bank deposits", SLATE);
+      c += warCard("Peak defense spending", fx(m.def_peak, 1) + "% of GDP", "FY" + m.def_peak_fy, "Before the war: " + fx(m.def_prewar, 1) + "% of " + (m.id === "wwi" ? "GNP" : "GDP"), TEAL);
+      c += warCard("Peak inflation", fx(m.infl_peak, 1) + "%", "in " + m.infl_peak_year, "Average during the war: " + fx(m.infl_avg, 1) + "% a year (window runs 2 years past the end)", MAUVE);
+      const ratio = isNum(m.crs_ratio) ? (m.crs_ratio < 1 ? "Debt added = " + fx(m.crs_ratio * 100, 0) + "% of the CRS cost" : "Debt added = " + fx(m.crs_ratio, 1) + "× the CRS cost") : "";
+      c += warCard("CRS war cost estimate", plain$(m.crs_cost_bn), (m.crs_cost_years || "") + ", military operations only",
+        (m.crs_note ? "Net to U.S. taxpayers: $4.7B; allies paid most. " : "") + ratio, SAND);
+    } else {
+      c += warCard("Debt change since Feb 27", money$(m.debt_change_bn), signed(m.debt_change_pct, 1, "%") + " · Feb 27 → Oct 7, 2026", "Whole federal budget, not war spending (Treasury Debt to the Penny)", ROSE);
+      c += warCard("Debt load at the start", fx(m.dpub_start, 1) + "%", "of GDP held by the public, FY2025", "Before WWII: " + fx(W.wwii_dpub_start, 1) + "% (FY1941)", ROSE);
+      c += warCard("Money supply (M2), 2026", signed(m.m2_change_pct, 1, "%"), money$(m.m2_change_bn) + " · Jan → Aug 2026", "Federal Reserve H.6 via FRED (M2SL)", SLATE);
+      c += warCard("Defense before the conflict", fx(m.def_prewar, 1) + "% of GDP", "FY2025", "FY2026 figures not published yet", TEAL);
+      c += warCard("Inflation, 2026 so far", fx(m.infl_avg, 1) + "%", "average of monthly 12-month rates", "2025: " + fx((m.event.series.cpi_inflation_pct || [])[0], 1) + "%", MAUVE);
+      c += warCard("DoD cost estimate", plain$(m.crs_cost_bn), "operations, Feb – May 2026", "Excludes damage to U.S. installations (CRS IN12678)", SAND);
+    }
+    $("warCallouts").innerHTML = c;
+    $("warEra").innerHTML = "<b>Money regime:</b> " + m.era_note;
+    $("warSources").innerHTML = srcLine(m.sources) + " S&amp;P 500: Robert Shiller&rsquo;s data, % changes only. Inflation: BLS CPI (Shiller CPI series). Gold: official U.S. price before 1960, World Bank Pink Sheet (CC BY 4.0) after.";
+    renderWarChart(m);
+    if (scroll) $("warPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderWarChart(m) {
+    const ev = m.event, iran = m.id === "iran_2026";
+    const t0 = ev.years[ev.rel.indexOf(0)];
+    $("warChartTitle").innerHTML = iran ? "2025 vs 2026 so far" : "Event study: " + (t0 - 1) + " (t−1) to " + (t0 + 5) + " (t+5)";
+    $("warChartAxis").innerHTML = "Left axis: debt and defense, % of GDP (fiscal years). Right axis: inflation, M2 growth and gold, % change from the year before; ◆ = S&amp;P 500 % change (annual averages, no price path)." +
+      (t0 < 1972 ? " Gold&rsquo;s price was fixed by law until 1971, so its line sits at zero." : "") + (iran ? " 2026 = year to date; later years haven&rsquo;t happened yet." : " Shaded = war years.");
+    if (!HAS_CHART) return;
+    const lab = ev.years.map((y, i) => y + (ev.rel[i] === -1 ? " (t−1)" : y === 2026 ? " YTD" : ""));
+    const S = ev.series;
+    const line = (label, data, color, axis, opt) => Object.assign({ label, data: data.map((v) => isNum(v) ? v : null), borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 3, tension: 0, yAxisID: axis, spanGaps: true }, opt || {});
+    const ds = [
+      line("Debt held by the public, % GDP", S.debt_public_pct_gdp, ROSE, "y", { borderWidth: 3.25 }),
+      line("Defense, % GDP", S.defense_pct_gdp, TEAL, "y", { borderWidth: 3.25 }),
+      line("Inflation", S.cpi_inflation_pct, MAUVE, "y2"),
+      line("M2 growth", S.m2_yoy_pct, SLATE, "y2"),
+      line("Gold, % change", S.gold_yoy_pct, SAND, "y2", { borderDash: [5, 4] }),
+      { type: "scatter", label: "S&P 500 % change (◆)", data: S.sp500_nominal_pct.map((v, i) => isNum(v) ? { x: i, y: v } : null).filter(Boolean), yAxisID: "y2", pointStyle: "rectRot", pointRadius: 7, pointHoverRadius: 9, backgroundColor: "#e7e9e6", borderColor: "#16191c", borderWidth: 1.5, order: -1 },
+    ];
+    const ext = (axis) => { const v = ds.filter((d) => d.yAxisID === axis).flatMap((d) => d.data.map((p) => p && typeof p === "object" ? p.y : p)).filter(isNum); return [Math.min(0, ...v), Math.max(0, ...v)]; };
+    const pad = (lo, hi) => { const r = (hi - lo) || 1; return [lo < 0 ? lo - 0.08 * r : 0, hi + 0.08 * r]; };
+    let [l0, l1] = pad(...ext("y")), [r0, r1] = pad(...ext("y2"));
+    const f = Math.max(-l0 / (l1 - l0), -r0 / (r1 - r0));
+    if (f > 0 && f < 1) { if (-l0 / (l1 - l0) < f) l0 = -f * l1 / (1 - f); else r0 = -f * r1 / (1 - f); }
+    const warIdx = ev.rel.map((k, i) => ev.war_rel.indexOf(k) >= 0 ? i : -1).filter((i) => i >= 0);
+    const highlights = !iran && warIdx.length ? [{ from: warIdx[0] - 0.5, to: warIdx[warIdx.length - 1] + 0.5, color: "rgba(231,233,230,0.05)", label: "war years", text: "rgba(231,233,230,0.6)" }] : [];
+    const narrow = ($("warChart").parentNode.clientWidth || 800) < 520;
+    const endTick = (fmt) => (v, i, arr) => { if ((i === 0 || i === arr.length - 1) && arr.length > 3) { const st = Math.abs(arr[2].value - arr[1].value); if (st && Math.abs(v / st - Math.round(v / st)) > 1e-6) return ""; } return fmt(v); };
+    if (charts.war) charts.war.destroy();
+    charts.war = new Chart($("warChart"), {
+      type: "line", data: { labels: lab, datasets: ds },
+      options: {
+        interaction: { mode: "index", intersect: false }, layout: { padding: { top: 6, right: 4 } },
+        scales: {
+          x: { type: "category", grid: { display: false }, ticks: { maxRotation: 0, autoSkip: false, font: { size: narrow ? 10 : 12 }, callback: (v, i) => narrow ? String(ev.years[i]).slice(2).replace(/^/, "’") : lab[i] } },
+          y: { position: "left", min: l0, max: l1, grid: { color: (c) => c.tick.value === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.05)" }, ticks: { maxTicksLimit: 6, callback: endTick((v) => Math.round(v) + "%") }, title: { display: !narrow, text: "% of GDP", color: "#7b837e", font: { size: 11 } } },
+          y2: { position: "right", min: r0, max: r1, grid: { display: false }, ticks: { maxTicksLimit: 6, callback: endTick((v) => (v > 0 ? "+" : "") + Math.round(v) + "%") }, title: { display: !narrow, text: "% change", color: "#7b837e", font: { size: 11 } } },
+        },
+        plugins: {
+          legend: { display: true, position: "top", align: "start", labels: { boxWidth: narrow ? 8 : 12, boxHeight: 3, padding: narrow ? 6 : 10, font: { size: narrow ? 10 : 12 } } },
+          bands: { highlights },
+          tooltip: { callbacks: { title: (it) => lab[it[0].dataIndex], label: (it) => " " + it.dataset.label.replace(" (◆)", "") + ": " + (it.dataset.yAxisID === "y" ? fx(it.parsed.y, 1) + "% of GDP" : signed(it.parsed.y, 1, "%")) } },
+        },
+      },
+    });
+  }
+
+  function renderWarTable() {
+    const W = D.wars;
+    let h = "<thead><tr><th>War</th><th>Years</th><th>Type</th><th>Debt added</th><th>Debt %</th><th>Debt/GDP before → after</th><th>M2 change</th><th>Peak defense, % GDP</th><th>Peak inflation</th><th>CRS cost</th></tr></thead><tbody>";
+    W.majors.forEach((m) => {
+      const iran = m.id === "iran_2026";
+      const yrs = m.start.slice(0, 4) + "–" + (m.end ? m.end.slice(0, 4) : "");
+      h += "<tr data-war='" + m.id + "'><td><b>" + m.short + "</b></td><td>" + yrs + (iran ? " <span class='muted small'>(ongoing)</span>" : "") + "</td><td class='war-type-cell'>" + m.type + "</td>" +
+        "<td>" + money$(m.debt_change_bn) + (iran ? " <span class='muted small'>YTD</span>" : "") + "</td><td>" + signed(m.debt_change_pct, iran ? 1 : 0, "%") + "</td>" +
+        "<td>" + fx(m.dpub_start, 1) + "% → " + (iran ? "<span class='muted'>n/a yet</span>" : fx(m.dpub_end, 1) + "%") + "</td>" +
+        "<td>" + signed(m.m2_change_pct, iran ? 1 : 0, "%") + (iran ? " <span class='muted small'>YTD</span>" : "") + "</td>" +
+        "<td>" + (iran ? fx(m.def_prewar, 1) + "% <span class='muted small'>(FY25, pre-war)</span>" : fx(m.def_peak, 1) + "% <span class='muted small'>(FY" + m.def_peak_fy + ")</span>") + "</td>" +
+        "<td>" + (iran ? fx(m.infl_avg, 1) + "% <span class='muted small'>YTD avg</span>" : fx(m.infl_peak, 1) + "% <span class='muted small'>(" + m.infl_peak_year + ")</span>") + "</td>" +
+        "<td>" + plain$(m.crs_cost_bn) + (iran ? " <span class='muted small'>DoD est.</span>" : m.crs_note ? " <span class='muted small'>(net $4.7B)</span>" : "") + "</td></tr>";
+    });
+    $("warTable").innerHTML = h + "</tbody>";
+    $("warTable").querySelectorAll("tr[data-war]").forEach((tr) => tr.onclick = () => selectWar(tr.dataset.war, true));
+    $("warTableNote").innerHTML = "Debt = gross federal debt, from the end of the fiscal year before the war to the end of the fiscal year in which it ended. Debt/GDP = debt held by the public (WWI: Treasury debt ÷ GNP). M2 and inflation use calendar years; peak inflation looks up to two years past the end. CRS cost = military operations only (no veterans&rsquo; benefits or interest); Iraq covers 2003–2010; Iran 2026 = DoD operational estimate through May. " + W.caveat;
+    $("warTableSources").innerHTML = srcLine(W.table_sources);
+  }
+
   // ------------------------------------------------------------ METHOD / FOOTER
   function renderMeta() {
     const latest = D.series.latest_by_series || {};
@@ -1693,6 +1882,7 @@
     whenVisible($("historyChart"), updateHistory);
     renderMoney();
     renderEras();
+    renderWars();
     initCompare();
     renderPress();
     renderExpansion();

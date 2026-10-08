@@ -50,6 +50,11 @@ No raw data files or data downloads are included.
   flows are our calculation; reported holdings only); CMS National Health Expenditure
   Accounts; AHRQ MEPS-IC; DOL Women's Bureau National Database of Childcare Prices; BLS
   health-insurance (method break ~late 2022) and daycare CPI; Fed Distributional Financial Accounts.
+- **Wars and conflicts (public domain, cited)**: conflict dates and legal basis from the U.S.
+  Department of State Office of the Historian, Congressional Research Service (R42738, RL31133,
+  IN12571, IN12678; war-cost estimates from RS22926), 38 CFR 3.2 and govinfo War Powers letters;
+  debt, deficit and defense from OMB Historical Tables and Census Historical Statistics (HSUS 1975);
+  Treasury Fiscal Data Debt to the Penny. S&P 500 shown only as % changes.
 - **Link-only, no charts of their data**: KFF Employer Health Benefits Survey (CC BY-NC-ND);
   World Gold Council central-bank statistics (no redistribution).
 
